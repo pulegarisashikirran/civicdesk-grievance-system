@@ -99,8 +99,8 @@ static void ask_text(const char *prompt, char *buf, size_t size)
 }
 
 /* Shows a numbered list and returns the chosen index (0-based). */
-
-static int ask_choice(const char *title,const char *const *options, int count)
+static int ask_choice(const char *title,
+                      const char *const *options, int count)
 {
     int i;
 
