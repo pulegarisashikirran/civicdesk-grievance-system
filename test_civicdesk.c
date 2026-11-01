@@ -583,14 +583,14 @@ static int test_load_rejects_future_dates(void)
     load_into(&sys);
 
     snprintf(record, sizeof record,
-             "CIVICDESK 1\\nC|5|A|X|Roads|2|%ld\\n", today + 1);
+             "CIVICDESK 1\nC|5|A|X|Roads|2|%ld\n", today + 1);
     write_text_file(record);
     CHECK(system_load(&sys, TEST_FILE, error, sizeof error) == -1);
     CHECK(sys.count == 12);
     CHECK(bst_search(&sys.bst, 4821) != NULL);
 
     snprintf(record, sizeof record,
-             "CIVICDESK 1\\nC|5|A|X|Roads|2|%ld\\nS|1|%ld|Future status\\n",
+             "CIVICDESK 1\nC|5|A|X|Roads|2|%ld\nS|1|%ld|Future status\n",
              today, today + 1);
     write_text_file(record);
     CHECK(system_load(&sys, TEST_FILE, error, sizeof error) == -1);
