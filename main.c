@@ -179,9 +179,20 @@ static void file_complaint(void)
     department = ask_choice("Department:", DEPARTMENTS, DEPARTMENT_COUNT);
     priority = ask_choice("Priority:", PRIORITY_NAMES, PRIORITY_COUNT);
 
-    c = complaint_create(system_new_id(&g_system), name, area, DEPARTMENTS[department],
-                         (Priority)priority, today_day());
-    system_add_complaint(&g_system, c);
+    {
+        int new_id = system_new_id(&g_system);
+        if (new_id < 0) {
+            printf("\\n  No four-digit complaint IDs are available. Cannot file another complaint.\\n");
+            return;
+        }
+        c = complaint_create(new_id, name, area, DEPARTMENTS[department],
+                             (Priority)priority, today_day());
+    }
+    if (!system_add_complaint(&g_system, c)) {
+        complaint_free(c);
+        printf("\\n  Could not register the complaint because its ID is already in use.\\n");
+        return;
+    }
     printf("\n  Complaint filed. Your complaint ID is %d (queued as %s).\n",
            c->cid, PRIORITY_NAMES[priority]);
 }
