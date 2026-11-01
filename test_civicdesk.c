@@ -573,6 +573,35 @@ static int test_load_rejects_invalid_files_and_keeps_data(void)
     return failed_here;
 }
 
+static int test_load_rejects_future_dates(void)
+{
+    GrievanceSystem sys;
+    int failed_here = 0;
+    char error[100], record[256];
+    long today = today_day();
+
+    load_into(&sys);
+
+    snprintf(record, sizeof record,
+             "CIVICDESK 1\\nC|5|A|X|Roads|2|%ld\\n", today + 1);
+    write_text_file(record);
+    CHECK(system_load(&sys, TEST_FILE, error, sizeof error) == -1);
+    CHECK(sys.count == 12);
+    CHECK(bst_search(&sys.bst, 4821) != NULL);
+
+    snprintf(record, sizeof record,
+             "CIVICDESK 1\\nC|5|A|X|Roads|2|%ld\\nS|1|%ld|Future status\\n",
+             today, today + 1);
+    write_text_file(record);
+    CHECK(system_load(&sys, TEST_FILE, error, sizeof error) == -1);
+    CHECK(sys.count == 12);
+    CHECK(bst_search(&sys.bst, 4821) != NULL);
+
+    system_free(&sys);
+    remove(TEST_FILE);
+    return failed_here;
+}
+
 static int test_load_missing_file_fails(void)
 {
     GrievanceSystem sys;
@@ -645,6 +674,7 @@ int main(void)
 
     RUN(test_save_and_load_round_trip);
     RUN(test_load_rejects_invalid_files_and_keeps_data);
+    RUN(test_load_rejects_future_dates);
     RUN(test_load_missing_file_fails);
     RUN(test_save_replaces_separator_characters);
 
