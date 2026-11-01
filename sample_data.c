@@ -78,7 +78,7 @@ Complaint **generate_random_complaints(int n, unsigned long seed)
     int *pool;
     Complaint **result;
 
-    if (n < 0 || n > pool_size)
+    if (n < 0 || n > 90000 || n > pool_size)
         return NULL;
     pool = xmalloc((size_t)pool_size * sizeof(int));
     result = xmalloc((size_t)n * sizeof(Complaint *));
