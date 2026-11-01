@@ -1,8 +1,13 @@
-﻿# Compiled executables
+# Compiled executables and object files
 *.exe
-# Compiled object files
 *.o
-# Local CivicDesk complaint data
 /civicdesk
+/test_civicdesk
 
+# Local CivicDesk data and test files
+/civicdesk_data.txt
+/civicdesk_test_data.tmp
+/this_file_does_not_exist.tmp
+
+# Editor settings
 .vscode/
