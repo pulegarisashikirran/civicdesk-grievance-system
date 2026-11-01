@@ -380,7 +380,17 @@ const findC = () => { const id = getId(); return Number.isNaN(id) ? null : sys.b
 function fileComplaint() {
   const name = $("nm").value.trim(), area = $("ar").value.trim();
   if (!name || !area) return toast("Enter the citizen name and the area.");
-  let id; do id = 1000 + Math.floor(Math.random() * 9000); while (sys.bst.search(id));   // random IDs keep the BST balanced
+  let id = null;
+  for (let attempt = 0; attempt < 128; attempt++) {
+    const candidate = 1000 + Math.floor(Math.random() * 9000);
+    if (!sys.bst.search(candidate)) { id = candidate; break; }
+  }
+  if (id === null) {
+    for (let candidate = 1000; candidate <= 9999; candidate++) {
+      if (!sys.bst.search(candidate)) { id = candidate; break; }
+    }
+  }
+  if (id === null) return toast("No four-digit complaint IDs are available.");
   add(new Complaint(id, name, area, $("dp").value, +$("pr").value, TODAY));
   $("nm").value = $("ar").value = ""; $("cid").value = $("tid").value = id;
   show(null, ""); toast(`Complaint filed. Your complaint ID is ${id}.`);
@@ -470,7 +480,7 @@ function benchmark() {
 
 /* ---------- data file shared with the C program (same format as its save and load options) ---------- */
 const clean = t => String(t).replace(/[|\r\n]/g, " ");
-const num = t => /^\d+$/.test(t) ? +t : NaN;
+const num = t => /^\d+$/.test(t) && Number.isSafeInteger(+t) ? +t : NaN;
 function dataText() {
   const out = ["CIVICDESK 1"];
   for (const c of sys.all) {
