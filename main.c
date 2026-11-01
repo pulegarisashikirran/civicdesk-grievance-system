@@ -182,7 +182,7 @@ static void file_complaint(void)
     {
         int new_id = system_new_id(&g_system);
         if (new_id < 0) {
-            printf("\\n  No four-digit complaint IDs are available. Cannot file another complaint.\\n");
+            printf("\n  No four-digit complaint IDs are available. Cannot file another complaint.\n");
             return;
         }
         c = complaint_create(new_id, name, area, DEPARTMENTS[department],
@@ -190,7 +190,7 @@ static void file_complaint(void)
     }
     if (!system_add_complaint(&g_system, c)) {
         complaint_free(c);
-        printf("\\n  Could not register the complaint because its ID is already in use.\\n");
+        printf("\n  Could not register the complaint because its ID is already in use.\n");
         return;
     }
     printf("\n  Complaint filed. Your complaint ID is %d (queued as %s).\n",
@@ -260,16 +260,17 @@ static void undo_last(void)
     Complaint *c;
 
     printf("\n--- Undo last status update ---\n");
-    if (!undo_pop(&g_system.undo, &record)) {
+    if (!undo_peek(&g_system.undo, &record)) {
         printf("  Nothing to undo.\n");
         return;
     }
     c = bst_search(&g_system.bst, record.cid);
-    if (c == NULL) {
-        printf("  Complaint not found. Cannot undo.\n");
+    if (c == NULL || complaint_status(c) != record.current ||
+        !history_remove_last(&c->history)) {
+        printf("  Cannot undo: complaint history no longer matches the undo record.\n");
         return;
     }
-    history_remove_last(&c->history);
+    (void)undo_pop(&g_system.undo, &record);
     printf("  Undone for complaint %d: '%s' removed, status is back to '%s'.\n",
            record.cid, STATUS_NAMES[record.current], STATUS_NAMES[record.previous]);
 }
