@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,11 +39,27 @@ int system_add_complaint(GrievanceSystem *sys, Complaint *c)
 
 int system_new_id(const GrievanceSystem *sys)
 {
-    for (;;) {
-        int cid = 1000 + rand() % 9000;             /* random IDs keep the BST reasonably balanced */
+    int attempt, start, offset;
+
+    /* There are only 9,000 four-digit IDs. Never loop forever when they are exhausted. */
+    if (sys->bst.size >= 9000)
+        return -1;
+
+    /* Random attempts usually find a free ID quickly and keep insertion order varied. */
+    for (attempt = 0; attempt < 64; attempt++) {
+        int cid = 1000 + rand() % 9000;
         if (bst_search(&sys->bst, cid) == NULL)
             return cid;
     }
+
+    /* Guaranteed fallback: inspect every four-digit ID at most once. */
+    start = rand() % 9000;
+    for (offset = 0; offset < 9000; offset++) {
+        int cid = 1000 + (start + offset) % 9000;
+        if (bst_search(&sys->bst, cid) == NULL)
+            return cid;
+    }
+    return -1;
 }
 
 void system_free(GrievanceSystem *sys)
@@ -126,8 +143,9 @@ static int parse_long(const char *text, long *out)
     char *end;
     if (text[0] == '\0')
         return 0;
+    errno = 0;
     *out = strtol(text, &end, 10);
-    return *end == '\0';
+    return errno != ERANGE && end != text && *end == '\0';
 }
 
 static void set_error(char *err, size_t size, const char *message, int line)
@@ -170,10 +188,21 @@ int system_load(GrievanceSystem *sys, const char *path, char *err, size_t err_si
         set_error(err, err_size, "the file could not be opened", 0);
         return -1;
     }
-    if (fgets(line, sizeof line, f) == NULL || strncmp(line, DATA_HEADER, strlen(DATA_HEADER)) != 0) {
+    if (fgets(line, sizeof line, f) == NULL) {
         fclose(f);
         set_error(err, err_size, "this is not a CivicDesk data file", 0);
         return -1;
+    }
+    {
+        size_t header_len = strlen(line);
+        while (header_len > 0 &&
+               (line[header_len - 1] == '\n' || line[header_len - 1] == '\r'))
+            line[--header_len] = '\0';
+        if (strcmp(line, DATA_HEADER) != 0) {
+            fclose(f);
+            set_error(err, err_size, "this is not a CivicDesk data file", 0);
+            return -1;
+        }
     }
 
     system_init(&tmp);                          /* build the new data on the side first */
@@ -181,6 +210,23 @@ int system_load(GrievanceSystem *sys, const char *path, char *err, size_t err_si
         size_t len = strlen(line);
         int nf;
         line_no++;
+
+        /* Reject a physical line that did not fit in the input buffer. */
+        if (len > 0 && line[len - 1] != '\n') {
+            int ch = fgetc(f);
+            if (ch != EOF) {
+                while (ch != '\n' && ch != EOF)
+                    ch = fgetc(f);
+                failed = 1;
+                why = "line is too long";
+                break;
+            }
+            if (ferror(f)) {
+                failed = 1;
+                why = "error while reading data file";
+                break;
+            }
+        }
         while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
             line[--len] = '\0';
         if (len == 0)
@@ -218,7 +264,14 @@ int system_load(GrievanceSystem *sys, const char *path, char *err, size_t err_si
             why = "unrecognised line";
         }
     }
-    fclose(f);
+    if (ferror(f)) {
+        failed = 1;
+        why = "error while reading data file";
+    }
+    if (fclose(f) != 0 && !failed) {
+        failed = 1;
+        why = "error while closing data file";
+    }
 
     if (!failed && !finish_complaint(&tmp, &current, &loaded)) {
         failed = 1;
