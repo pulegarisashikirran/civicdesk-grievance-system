@@ -374,7 +374,13 @@ function render() {
   $("note").textContent = view.note || `${list.length} complaints, in the order they were filed.`;
 }
 const show = (list, note) => { view = { list, note }; render(); };
-const getId = () => parseInt($("cid").value.trim(), 10);
+const parseId = value => {
+  const raw = String(value).trim();
+  if (!/^\\d+$/.test(raw)) return NaN;
+  const id = Number(raw);
+  return Number.isSafeInteger(id) ? id : NaN;
+};
+const getId = () => parseId($("cid").value);
 const findC = () => { const id = getId(); return Number.isNaN(id) ? null : sys.bst.search(id); };
 
 function fileComplaint() {
@@ -422,7 +428,7 @@ function undoLast() {
   show(view.list, view.note); toast(`Undone for complaint ${r.id}: back to ${ST[r.prev]}.`);
 }
 function history() {
-  const id = parseInt($("tid").value.trim(), 10), c = Number.isNaN(id) ? null : sys.bst.search(id);
+  const id = parseId($("tid").value), c = Number.isNaN(id) ? null : sys.bst.search(id);
   if (!c) return toast("Complaint not found. Enter a valid ID.");
   $("hist").innerHTML = `<p class="note" style="margin-top:0">Complaint ${c.id} for ${esc(c.name)}, ${esc(c.dept)}, ${esc(c.area)}</p><ol class="h">` +
     c.history.toArray().map(n => `<li><b>${ST[n.status]}</b> on ${fmt(n.day)}${n.remarks ? ", " + esc(n.remarks) : ""}</li>`).join("") + "</ol>";
@@ -432,8 +438,8 @@ function search() {
   if (!q) return toast("Enter something to search for.");
   let list, how;
   if (mode === "bst" || mode === "bin") {
-    const id = parseInt(q, 10);
-    if (Number.isNaN(id)) return toast("Complaint IDs are numbers.");
+    const id = parseId(q);
+    if (Number.isNaN(id)) return toast("Enter a whole-number complaint ID.");
     const c = mode === "bst" ? sys.bst.search(id) : binarySearch(sys.bst.inorder(), id);
     list = c ? [c] : []; how = mode === "bst" ? "BST search" : "Binary search on the sorted list";
   } else {
@@ -505,14 +511,14 @@ function parseData(text) {
     if (f[0] === "C" && f.length === 7) {
       const id = num(f[1]), pri = num(f[5]), filed = num(f[6]);
       if (![id, pri, filed].every(Number.isSafeInteger) || id < 1 || id > 999999 ||
-          pri < 0 || pri > 2 || filed < 0 || !f[2] || !f[3] || !f[4] ||
+          pri < 0 || pri > 2 || filed < 0 || filed > TODAY || !f[2] || !f[3] || !f[4] ||
           f[2].length > 31 || f[3].length > 31 || f[4].length > 23) bad("invalid complaint record");
       if (ids.has(id)) bad("duplicate complaint ID");
       ids.add(id); cur = new Complaint(id, f[2], f[3], f[4], pri, filed); list.push(cur);
     } else if (f[0] === "S" && f.length === 4 && cur) {
       const st = num(f[1]), day = num(f[2]);
       if (![st, day].every(Number.isSafeInteger) || st < 1 || st > 3 || st <= cur.status ||
-          day < cur.history.tail.day || f[3].length > 63) bad("invalid status record");
+          day < cur.history.tail.day || day > TODAY || f[3].length > 63) bad("invalid status record");
       cur.history.append(st, f[3], day);
     } else bad("unrecognised line");
   });
