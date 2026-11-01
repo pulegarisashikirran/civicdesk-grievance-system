@@ -99,20 +99,42 @@ static void ask_text(const char *prompt, char *buf, size_t size)
 }
 
 /* Shows a numbered list and returns the chosen index (0-based). */
-static int ask_choice(const char *title, const char *const *options, int count)
+
+static int ask_choice(const char *title,const char *const *options, int count)
 {
     int i;
+
+    if (count <= 0)
+        return -1;
+
     printf("%s\n", title);
+
     for (i = 0; i < count; i++)
         printf("  %d. %s\n", i + 1, options[i]);
+
     for (;;) {
         char buf[32];
+        size_t j, len;
+        int valid = 1;
         int value = 0;
+
         read_line("  Choose: ", buf, sizeof buf);
-        if (buf[0] != '\0' && strlen(buf) <= 3 && isdigit((unsigned char)buf[0]))
+        len = strlen(buf);
+
+        if (len == 0 || len > 3)
+            valid = 0;
+
+        for (j = 0; j < len && valid; j++) {
+            if (!isdigit((unsigned char)buf[j]))
+                valid = 0;
+        }
+
+        if (valid)
             value = atoi(buf);
-        if (value >= 1 && value <= count)
+
+        if (valid && value >= 1 && value <= count)
             return value - 1;
+
         printf("  Invalid choice, try again.\n");
     }
 }
