@@ -8,13 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
+#include <limits.h>
 
 #include "grievance_system.h"
 #include "sample_data.h"
 #include "search_sort.h"
 #include "util.h"
-#include <errno.h>
-#include <limits.h>
 
 static GrievanceSystem g_system;
 
@@ -24,8 +24,8 @@ static void cleanup(void)
 }
 
 /* ------------------------------------------------------------ input helpers */
-/* Reads one line. If the input stream ends, the program exits (cleanup runs via atexit). */
-/* Reads one line safely and handles oversized input. */
+/* Reads one line safely. If the input stream ends, the program exits (cleanup runs via atexit).
+ * A line longer than the buffer is discarded and an empty string is returned. */
 static void read_line(const char *prompt, char *buf, size_t size)
 {
     size_t len, start = 0;
@@ -44,32 +44,26 @@ static void read_line(const char *prompt, char *buf, size_t size)
 
     len = strlen(buf);
 
-    /* Detect and discard characters beyond the buffer. */
+    /* No newline and not at the end of the input: the line did not fit in the buffer. */
     if (len > 0 && buf[len - 1] != '\n' && !feof(stdin)) {
         ch = getchar();
-
         if (ch != '\n' && ch != EOF) {
-            while (ch != '\n' && ch != EOF)
+            while (ch != '\n' && ch != EOF)         /* discard the rest of the line */
                 ch = getchar();
-
             buf[0] = '\0';
             printf("  Input too long. Please try again.\n");
             return;
         }
     }
 
-    /* Remove trailing whitespace. */
-    while (len > 0 && isspace((unsigned char)buf[len - 1]))
+    while (len > 0 && isspace((unsigned char)buf[len - 1]))   /* trailing whitespace */
         buf[--len] = '\0';
-
-    /* Remove leading whitespace. */
-    while (buf[start] != '\0' &&
-           isspace((unsigned char)buf[start]))
+    while (buf[start] != '\0' && isspace((unsigned char)buf[start]))   /* leading whitespace */
         start++;
-
     if (start > 0)
         memmove(buf, buf + start, strlen(buf + start) + 1);
 }
+
 static int ask_int(const char *prompt)
 {
     char buf[32];
@@ -78,70 +72,51 @@ static int ask_int(const char *prompt)
     int valid;
 
     for (;;) {
-        read_line(prompt, buf, sizeof(buf));
-
+        read_line(prompt, buf, sizeof buf);
         len = strlen(buf);
         valid = (len > 0);
-
-        for (i = 0; i < len && valid; i++) {
+        for (i = 0; i < len && valid; i++)
             if (!isdigit((unsigned char)buf[i]))
                 valid = 0;
-        }
-
         if (valid) {
             errno = 0;
             value = strtol(buf, NULL, 10);
-
             if (errno != ERANGE && value <= INT_MAX)
                 return (int)value;
         }
-
         printf("  Please enter a valid number.\n");
     }
 }
 
-/* Reads non-empty text. */
 static void ask_text(const char *prompt, char *buf, size_t size)
 {
     for (;;) {
         read_line(prompt, buf, size);
-
         if (buf[0] != '\0')
             return;
-
         printf("  This field cannot be empty.\n");
     }
 }
 
-/* Displays options and returns the selected index. */
-static int ask_choice(const char *title,
-                      const char *const *options, int count)
+/* Shows a numbered list and returns the chosen index (0-based). */
+static int ask_choice(const char *title, const char *const *options, int count)
 {
-    int i, value;
-
-    if (count <= 0)
-        return -1;
-
+    int i;
     printf("%s\n", title);
-
     for (i = 0; i < count; i++)
         printf("  %d. %s\n", i + 1, options[i]);
-
     for (;;) {
-        value = ask_int("  Choose: ");
-
+        char buf[32];
+        int value = 0;
+        read_line("  Choose: ", buf, sizeof buf);
+        if (buf[0] != '\0' && strlen(buf) <= 3 && isdigit((unsigned char)buf[0]))
+            value = atoi(buf);
         if (value >= 1 && value <= count)
             return value - 1;
-
         printf("  Invalid choice, try again.\n");
     }
 }
-pick = ask_choice(title, options, count);
 
-if (pick < 0)
-    return;
-
-chosen = (Status)((int)current + 1 + pick);
 static void print_table(Complaint **list, int n)
 {
     int i;
@@ -182,16 +157,11 @@ static void file_complaint(void)
     department = ask_choice("Department:", DEPARTMENTS, DEPARTMENT_COUNT);
     priority = ask_choice("Priority:", PRIORITY_NAMES, PRIORITY_COUNT);
 
-    c = complaint_create(system_new_id(&g_system), name, area,
-                     DEPARTMENTS[department],
-                     (Priority)priority, today_day());
-
-if (c == NULL) {
-    printf("  Could not create complaint. Memory allocation failed.\n");
-    return;
-}
-
-system_add_complaint(&g_system, c);
+    c = complaint_create(system_new_id(&g_system), name, area, DEPARTMENTS[department],
+                         (Priority)priority, today_day());
+    system_add_complaint(&g_system, c);
+    printf("\n  Complaint filed. Your complaint ID is %d (queued as %s).\n",
+           c->cid, PRIORITY_NAMES[priority]);
 }
 
 static void process_next(void)
@@ -250,31 +220,25 @@ static void update_status(void)
     undo_push(&g_system.undo, record);                      /* remember for undo */
     printf("  Status updated: %s -> %s\n", STATUS_NAMES[current], STATUS_NAMES[chosen]);
 }
+
 static void undo_last(void)
 {
     UndoRecord record;
     Complaint *c;
 
     printf("\n--- Undo last status update ---\n");
-
     if (!undo_pop(&g_system.undo, &record)) {
         printf("  Nothing to undo.\n");
         return;
     }
-
     c = bst_search(&g_system.bst, record.cid);
-
     if (c == NULL) {
         printf("  Complaint not found. Cannot undo.\n");
         return;
     }
-
     history_remove_last(&c->history);
-
     printf("  Undone for complaint %d: '%s' removed, status is back to '%s'.\n",
-           record.cid,
-           STATUS_NAMES[record.current],
-           STATUS_NAMES[record.previous]);
+           record.cid, STATUS_NAMES[record.current], STATUS_NAMES[record.previous]);
 }
 
 static void search_menu(void)
@@ -447,16 +411,17 @@ static void print_menu(void)
 int main(void)
 {
     Complaint **samples;
-    int i, n = 0;
+    int i, n;
+    char choice[16];
 
-samples = load_sample_complaints(&n);
+    srand((unsigned)time(NULL));
+    system_init(&g_system);
+    atexit(cleanup);
 
-if (samples != NULL) {
+    samples = load_sample_complaints(&n);
     for (i = 0; i < n; i++)
         system_add_complaint(&g_system, samples[i]);
-
-    free(samples);
-}                               /* the system now owns the complaints */
+    free(samples);                                  /* the system now owns the complaints */
 
     printf("CivicDesk: Public Grievance Redressal System\n");
     printf("Loaded %d sample complaints.\n", g_system.count);
