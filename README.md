@@ -231,52 +231,97 @@ C|1307|Anita|Gachibowli|Electricity|1|20750
 * The `|` character and line breaks cannot be stored inside a field, so they are replaced with spaces when saving.
 * On loading, the whole file is checked first. If any line is invalid, nothing is changed.
 
-## Local development
+## Local Development
 
-Requires a C compiler that supports C99 (GCC, Clang, or MinGW on Windows). No libraries to install.
+### Requirements
+
+- GCC, Clang or MinGW C compiler supporting C99.
+- Git (to clone the repository).
+- No external libraries or dependencies are required.
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/pulegarisashikirran/civicdesk-grievance-system.git
 cd civicdesk-grievance-system
 ```
 
-**Build and run with `make`:**
+### 2. Build and Run
+
+**Option A: Using Make**
+
+If GNU Make is installed:
 
 ```bash
 make
+```
+
+On Linux/macOS:
+
+```bash
 ./civicdesk
 ```
 
-**Or compile directly with GCC (no `make` needed):**
+On Windows PowerShell:
+
+```powershell
+.\civicdesk.exe
+```
+
+**Option B: Compile Directly Using GCC**
+
+This method does not require Make.
+
+Linux/macOS:
 
 ```bash
 gcc -std=c99 -Wall -Wextra -O2 -o civicdesk main.c util.c status_list.c complaint.c bst.c queues.c undo_stack.c search_sort.c sample_data.c grievance_system.c
 ./civicdesk
 ```
 
-On Windows (MinGW), the program is created as `civicdesk.exe` and started with `civicdesk`. In Code::Blocks or Dev-C++, create a project and add every `.c` and `.h` file.
+Windows (MinGW):
 
-**Run the automated tests:**
+```powershell
+gcc -std=c99 -Wall -Wextra -O2 -o civicdesk.exe main.c util.c status_list.c complaint.c bst.c queues.c undo_stack.c search_sort.c sample_data.c grievance_system.c
+.\civicdesk.exe
+```
+
+### 3. Run Automated Tests
+
+Using Make:
 
 ```bash
 make test
 ```
 
-or
+Or compile directly with GCC:
 
 ```bash
 gcc -std=c99 -Wall -Wextra -O2 -o test_civicdesk test_civicdesk.c util.c status_list.c complaint.c bst.c queues.c undo_stack.c search_sort.c sample_data.c grievance_system.c
+```
+
+Linux/macOS:
+
+```bash
 ./test_civicdesk
 ```
 
-**Optional memory check (Linux / macOS / MinGW with sanitizer support):**
+Windows PowerShell:
+
+```powershell
+.\test_civicdesk.exe
+```
+
+### 4. Optional Memory Check
+
+On systems with AddressSanitizer and UndefinedBehaviorSanitizer support:
 
 ```bash
 gcc -std=c99 -g -fsanitize=address,undefined -o civicdesk_check main.c util.c status_list.c complaint.c bst.c queues.c undo_stack.c search_sort.c sample_data.c grievance_system.c
 ./civicdesk_check
 ```
 
-The benchmark option (menu item 8) takes a couple of seconds because it deliberately runs the O(n²) sorts on up to 10,000 complaints.
+The benchmark option (menu item 8) runs the sorting and searching algorithms on generated complaint data. Larger datasets take longer because Bubble, Selection and Insertion Sort have O(n²) time complexity.
 
 ### Benchmark results
 
