@@ -280,13 +280,48 @@ The benchmark option (menu item 8) takes a couple of seconds because it delibera
 
 ### Benchmark results
 
-_Run menu option 8 on your own machine and paste the table here. Times vary by computer and compiler settings._
+CivicDesk includes a benchmarking module that compares five sorting algorithms and three searching methods using randomly generated complaint data.
 
-| Complaints (n) | Bubble | Selection | Insertion | Merge | Quick |
-|---|---|---|---|---|---|
-| 1000 | | | | | |
-| 5000 | | | | | |
-| 10000 | | | | | |
+All execution times below are actual measurements captured from the CivicDesk C application. Times are displayed in milliseconds and may vary depending on hardware, compiler optimization and system load.
+
+#### Sorting Performance
+
+| Complaints (n) | Bubble Sort | Selection Sort | Insertion Sort | Merge Sort | Quick Sort |
+|---:|---:|---:|---:|---:|---:|
+| 1,000 | 39.00 ms | 32.00 ms | 17.00 ms | 1.00 ms | 1.00 ms |
+| 5,000 | 1,077.00 ms | 1,030.00 ms | 529.00 ms | 5.00 ms | 6.00 ms |
+| 10,000 | 6,354.00 ms | 5,352.00 ms | 2,523.00 ms | 18.00 ms | 16.00 ms |
+
+#### Searching Performance
+
+The searching benchmark was performed using 500 lookups in a dataset containing 20,000 complaints.
+
+| Searching Algorithm | Execution Time |
+|---|---:|
+| Linear Search | 133.00 ms |
+| Binary Search | 0.00 ms |
+| BST Search | 1.00 ms |
+
+**Benchmark details:**
+- Dataset size: 20,000 complaints
+- Number of search operations: 500
+- BST height: 35
+- Data type: Randomly generated complaint data
+- Time unit: Milliseconds
+
+*Note: Binary Search displaying 0.00 ms means its measured execution time was below the timer's displayed precision.*
+
+#### Performance Analysis
+
+- **Bubble Sort:** Execution time increases significantly with larger datasets due to O(n²) average and worst-case complexity.
+- **Selection Sort:** Also has O(n²) time complexity.
+- **Insertion Sort:** Performs better than Bubble and Selection Sort in these measurements.
+- **Merge Sort:** Demonstrates efficient performance with O(n log n) time complexity.
+- **Quick Sort:** Shows competitive performance on the tested random datasets, with average O(n log n) complexity.
+- **Binary Search:** Provides efficient lookup on sorted data with O(log n) time complexity.
+- **BST Search:** Provides efficient lookup with average O(log n) and worst-case O(n) complexity.
+
+Actual execution times depend on hardware, compiler settings, dataset and system conditions.
 
 ## Sample output
 
@@ -339,10 +374,3 @@ Educational demonstration of queues, singly linked lists, stacks, binary search 
 
 This project is licensed under the [MIT License](LICENSE).
 
-## Author
-
-**Pulegari Shashi Kiran Reddy**
-B.Tech CSE, 2nd Year — Symbiosis Institute of Technology, Hyderabad
-GitHub: [pulegarisashikirran](https://github.com/pulegarisashikirran)
-
-_Built for the Data Structures course, Assessment 3 (October 2026)._
