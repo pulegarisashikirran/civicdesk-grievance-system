@@ -497,7 +497,7 @@ function exportData() {
 }
 function parseData(text) {
   const lines = text.split(/\r?\n/), list = [], ids = new Set();
-  if ((lines[0] || "").replace(/\\r$/, "") !== "CIVICDESK 1") throw new Error("this is not a CivicDesk data file");
+  if ((lines[0] || "").replace(/\r$/, "") !== "CIVICDESK 1") throw new Error("this is not a CivicDesk data file");
   let cur = null;
   lines.slice(1).forEach((ln, i) => {
     if (!ln) return;
