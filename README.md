@@ -153,7 +153,7 @@ The BST is the master index of all complaints. The three queues hold only the co
 
 ## How a Complaint Flows Through the System
 
-1. A citizen's complaint is entered through **File a new complaint**. A random unused 4-digit ID is generated.
+1. A citizen's complaint is entered through **File a new complaint**. A random unused 4-digit ID is generated; if all 9,000 IDs are occupied, registration is rejected instead of retrying forever.
 2. The complaint is inserted into the **BST** and placed in the **Urgent / High / Normal queue**. Its **status list** starts with "Filed".
 3. **Process next complaint** takes the first complaint from the highest non-empty queue and appends "Assigned" to its status list.
 4. **Update complaint status** moves a processed complaint to "In Progress" or "Resolved". The new status is appended to the linked list and a record is pushed on the **undo stack**. Complaints still waiting in a queue cannot be updated, so the queues always stay consistent.
@@ -417,7 +417,7 @@ LICENSE               MIT License
 * The BST is not self-balancing. An AVL or Red-Black tree would guarantee O(log n) even for sorted IDs.
 * Priority has only three fixed levels. A heap-based priority queue would allow finer ranking, for example by pending days within a priority.
 * Undo covers status updates only; filing and processing a complaint cannot be undone.
-* Text fields have fixed maximum lengths (names and areas up to 31 characters, remarks up to 63) and longer input is cut off.
+* Text fields have fixed maximum lengths (names and areas up to 31 characters, department up to 23, remarks up to 63). Console input longer than its buffer is rejected rather than silently accepted.
 * The interface is a console menu. A web or desktop front end would let citizens file and track complaints themselves.
 
 ## Scope and handoff status
