@@ -534,7 +534,7 @@ static int test_load_rejects_invalid_files_and_keeps_data(void)
     char error[100];
 
     load_into(&sys);
-    for (i = 0; i < 6; i++) {
+    for (i = 0; i < 8; i++) {
         write_text_file(bad_files[i]);
         CHECK(system_load(&sys, TEST_FILE, error, sizeof error) == -1);
         CHECK(error[0] != '\0');
