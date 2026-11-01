@@ -1,6 +1,6 @@
 # CivicDesk — Public Grievance Redressal System (C)
 
-CivicDesk is a menu-driven complaint-management application and data-structures project written in **C**. Citizens' complaints are registered, prioritised through three linked-list queues, tracked through a per-complaint status history, indexed in a binary search tree, and reported with classical searching and sorting algorithms. Every status change can be reversed with an undo stack. All names, areas and complaints in the sample data are fictional, and nothing is sent to any real government system.
+CivicDesk is a menu-driven complaint-management application and data-structures project written in **C**. Citizens' complaints are registered, prioritised through three linked-list queues, tracked through a per-complaint status history, indexed in a binary search tree, and reported with classical searching and sorting algorithms. Manual complaint status updates can be reversed using a linked-list-based undo stack. All names, areas and complaints in the sample data are fictional, and nothing is sent to any real government system.
 
 Repository: https://github.com/pulegarisashikirran/civicdesk-grievance-system
 
@@ -10,7 +10,7 @@ The live demo is a JavaScript version of the same logic, made for easy demonstra
 
 ## What is implemented
 
-* Console application in standard **C99** with no external libraries; every data structure is built by hand with `malloc` and pointers (no STL, no ready-made containers).
+* Console application in standard **C99** with no external libraries; every data structure is built by hand with `malloc` and pointers (no built-in container libraries, no ready-made containers).
 * Complaint registration with a generated unique ID, citizen name, area, department and priority (Urgent / High / Normal).
 * Three FIFO queues (one per priority) with a "process next complaint" action that always serves the highest non-empty priority.
 * A singly linked list per complaint that records the full status trail: Filed → Assigned → In Progress → Resolved, with dates and remarks.
@@ -122,7 +122,7 @@ CivicDesk is architected around six foundational data structures and classical a
   * Each node points to one complaint. IDs smaller than the node go to the left subtree, larger IDs to the right.
   * `bst_insert()` walks down iteratively and rejects duplicate IDs. `bst_search()` follows a single root-to-node path.
   * `bst_inorder()` visits left, node, right, which always yields complaints sorted by ID with no separate sorting step. This array also feeds binary search.
-  * New complaint IDs are generated randomly (not 1, 2, 3, …) so the tree stays reasonably balanced. Inserting IDs in sorted order would turn it into a straight line and degrade operations to O(n); this behaviour is covered by a unit test. Self-balancing trees (AVL / Red-Black) are listed under future improvements.
+  * Randomly generated complaint IDs help reduce the likelihood of highly unbalanced insertion patterns, although the BST does not guarantee balance. Inserting IDs in sorted order would turn it into a straight line and degrade operations to O(n); this behaviour is covered by a unit test. Self-balancing trees (AVL / Red-Black) are listed under future improvements.
   * Average search and insert: O(log n); worst case O(n).
 
 #### 8–12. Five Sorting Algorithms
@@ -368,9 +368,28 @@ The searching benchmark was performed using 500 lookups in a dataset containing 
 
 Actual execution times depend on hardware, compiler settings, dataset and system conditions.
 
-## Sample output
+## Sample Outputs
 
-_Add screenshots of the menu, processing a complaint, a status history, an undo, a search and a sorted report here._
+### 1. Main Menu
+![Main Menu](screenshots/main-menu.png)
+
+### 2. Complaint Management
+![File Complaint](screenshots/file-complaint.png)
+![Process Complaint](screenshots/complaint-processing.png)
+![Update Status](screenshots/status-update.png)
+![Undo Status](screenshots/undo-status.png)
+
+### 3. Search and Reports
+![Search Results](screenshots/search-results.png)
+![Status History](screenshots/status-history.png)
+![Sorted Reports](screenshots/sorted-reports.png)
+
+### 4. Performance Benchmark
+![Benchmark Results](screenshots/benchmark-results.png)
+
+### 5. Data Persistence
+![Save Data](screenshots/save-data.png)
+![Load Data](screenshots/load-data.png)
 
 ## Main files
 
@@ -407,7 +426,7 @@ The requested direction is a complaint-management project built only on the topi
 
 **Implemented in this version:** complaint registration; three-level priority queues; status history with linked lists; undo with a stack; BST index; BST, binary and linear search; five sorting algorithms with timing; benchmark; sample data; saving and loading of data files; automated tests; full memory clean-up.
 
-**Verified:** the 27 tests in `test_civicdesk.c` pass, including under AddressSanitizer and UndefinedBehaviorSanitizer with no errors or memory leaks. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, that quick sort handles sorted and reversed input, that merge sort is stable, that BST search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files are rejected without changing the current data. A full pass through every menu option was also run, including invalid input and end-of-input handling.
+**Verified:** All 27 automated tests pass successfully. The tests cover data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, that quick sort handles sorted and reversed input, that merge sort is stable, that BST search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files are rejected without changing the current data. A full pass through every menu option was also run, including invalid input and end-of-input handling.
 
 **Still pending / sensible next steps:** sharing data between programs through a server and a database, a self-balancing tree, a graphical or web interface, and more tests for the menu input handling.
 
