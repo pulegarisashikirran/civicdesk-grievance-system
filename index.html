@@ -175,7 +175,9 @@ body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
 const PRI = ["Urgent", "High", "Normal"];
 const ST = ["Filed", "Assigned", "In Progress", "Resolved"];
 const DEPTS = ["Water Supply", "Electricity", "Roads", "Sanitation", "Street Lights"];
-const DAY = 864e5, TODAY = Math.floor(Date.now() / DAY);
+const DAY = 864e5;
+const now = new Date();
+const TODAY = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt = d => new Date(d * DAY).toISOString().slice(0, 10);
@@ -401,9 +403,12 @@ function updateStatus() {
   $("rm").value = ""; show(view.list, view.note); toast(`Status updated: ${ST[cur]} to ${ST[to]}.`);
 }
 function undoLast() {
-  const r = sys.undo.pop();
+  const r = sys.undo.top?.r;
   if (!r) return toast("Nothing to undo.");
-  sys.bst.search(r.id).history.removeLast();
+  const c = sys.bst.search(r.id);
+  if (!c || c.status !== r.now || !c.history.removeLast())
+    return toast("Cannot undo: complaint history no longer matches the undo record.");
+  sys.undo.pop();
   show(view.list, view.note); toast(`Undone for complaint ${r.id}: back to ${ST[r.prev]}.`);
 }
 function history() {
@@ -482,19 +487,22 @@ function exportData() {
 }
 function parseData(text) {
   const lines = text.split(/\r?\n/), list = [], ids = new Set();
-  if (!lines[0].startsWith("CIVICDESK 1")) throw new Error("this is not a CivicDesk data file");
+  if ((lines[0] || "").replace(/\\r$/, "") !== "CIVICDESK 1") throw new Error("this is not a CivicDesk data file");
   let cur = null;
   lines.slice(1).forEach((ln, i) => {
     if (!ln) return;
     const f = ln.split("|"), bad = m => { throw new Error(`line ${i + 2}: ${m}`); };
     if (f[0] === "C" && f.length === 7) {
       const id = num(f[1]), pri = num(f[5]), filed = num(f[6]);
-      if (![id, pri, filed].every(Number.isInteger) || id < 1 || id > 999999 || pri > 2 || !f[2] || !f[3] || !f[4]) bad("invalid complaint record");
+      if (![id, pri, filed].every(Number.isSafeInteger) || id < 1 || id > 999999 ||
+          pri < 0 || pri > 2 || filed < 0 || !f[2] || !f[3] || !f[4] ||
+          f[2].length > 31 || f[3].length > 31 || f[4].length > 23) bad("invalid complaint record");
       if (ids.has(id)) bad("duplicate complaint ID");
       ids.add(id); cur = new Complaint(id, f[2], f[3], f[4], pri, filed); list.push(cur);
     } else if (f[0] === "S" && f.length === 4 && cur) {
       const st = num(f[1]), day = num(f[2]);
-      if (![st, day].every(Number.isInteger) || st < 1 || st > 3 || st <= cur.status || day < cur.history.tail.day) bad("invalid status record");
+      if (![st, day].every(Number.isSafeInteger) || st < 1 || st > 3 || st <= cur.status ||
+          day < cur.history.tail.day || f[3].length > 63) bad("invalid status record");
       cur.history.append(st, f[3], day);
     } else bad("unrecognised line");
   });
