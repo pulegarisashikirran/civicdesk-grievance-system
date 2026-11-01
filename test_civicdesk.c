@@ -391,6 +391,27 @@ static int test_system_grows_beyond_initial_capacity(void)
 
 /* ------------------------------------------------ extra tests: empty cases and consistency */
 
+static int test_benchmark_rejects_invalid_sizes(void)
+{
+    int failed_here = 0;
+    int invalid_size = -1;
+    SortBenchRow row;
+    SearchBenchResult result;
+
+    CHECK(generate_random_complaints(90001, 1) == NULL);
+
+    result = benchmark_searching(0, 10);
+    CHECK(result.linear_ms == 0.0 && result.binary_ms == 0.0 && result.bst_ms == 0.0);
+    result = benchmark_searching(10, 0);
+    CHECK(result.linear_ms == 0.0 && result.binary_ms == 0.0 && result.bst_ms == 0.0);
+
+    benchmark_sorting(&invalid_size, 1, &row);
+    CHECK(row.n == -1);
+    CHECK(row.ms[0] == 0.0 && row.ms[1] == 0.0 && row.ms[2] == 0.0 &&
+          row.ms[3] == 0.0 && row.ms[4] == 0.0);
+    return failed_here;
+}
+
 static int test_empty_system_starts_clean(void)
 {
     GrievanceSystem sys;
@@ -616,6 +637,7 @@ int main(void)
     RUN(test_generated_ids_are_unused);
     RUN(test_system_grows_beyond_initial_capacity);
 
+    RUN(test_benchmark_rejects_invalid_sizes);
     RUN(test_empty_system_starts_clean);
     RUN(test_empty_bst_search_and_traversal);
     RUN(test_priority_queue_counts_are_consistent);
