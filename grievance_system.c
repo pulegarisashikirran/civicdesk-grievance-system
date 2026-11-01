@@ -236,7 +236,7 @@ int system_load(GrievanceSystem *sys, const char *path, char *err, size_t err_si
                 why = "duplicate complaint ID";
             } else if (!parse_long(fields[1], &id) || !parse_long(fields[5], &priority) ||
                        !parse_long(fields[6], &filed) || id < 1 || id > 999999 ||
-                       priority < 0 || priority >= PRIORITY_COUNT || filed < 0 ||
+                       priority < 0 || priority >= PRIORITY_COUNT || filed < 0 || filed > today_day() ||
                        fields[2][0] == '\0' || fields[3][0] == '\0' || fields[4][0] == '\0' ||
                        strlen(fields[2]) >= NAME_LEN || strlen(fields[3]) >= AREA_LEN ||
                        strlen(fields[4]) >= DEPT_LEN) {
@@ -251,7 +251,7 @@ int system_load(GrievanceSystem *sys, const char *path, char *err, size_t err_si
             if (!parse_long(fields[1], &status) || !parse_long(fields[2], &day) ||
                 status < 1 || status >= STATUS_COUNT ||
                 (Status)status <= complaint_status(current) ||
-                day < history_last_day(&current->history) ||
+                day < history_last_day(&current->history) || day > today_day() ||
                 strlen(fields[3]) >= REMARK_LEN) {
                 failed = 1;
                 why = "invalid status record";
