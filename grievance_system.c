@@ -41,10 +41,7 @@ int system_new_id(const GrievanceSystem *sys)
 {
     int attempt, start, offset;
 
-    /* There are only 9,000 four-digit IDs. Never loop forever when they are exhausted. */
-    if (sys->bst.size >= 9000)
-        return -1;
-
+    /* There are only 9,000 four-digit IDs; the bounded scan below handles exhaustion. */
     /* Random attempts usually find a free ID quickly and keep insertion order varied. */
     for (attempt = 0; attempt < 64; attempt++) {
         int cid = 1000 + rand() % 9000;
@@ -241,7 +238,9 @@ int system_load(GrievanceSystem *sys, const char *path, char *err, size_t err_si
             } else if (!parse_long(fields[1], &id) || !parse_long(fields[5], &priority) ||
                        !parse_long(fields[6], &filed) || id < 1 || id > 999999 ||
                        priority < 0 || priority >= PRIORITY_COUNT || filed < 0 ||
-                       fields[2][0] == '\0' || fields[3][0] == '\0' || fields[4][0] == '\0') {
+                       fields[2][0] == '\0' || fields[3][0] == '\0' || fields[4][0] == '\0' ||
+                       strlen(fields[2]) >= NAME_LEN || strlen(fields[3]) >= AREA_LEN ||
+                       strlen(fields[4]) >= DEPT_LEN) {
                 failed = 1;
                 why = "invalid complaint record";
             } else {
@@ -253,7 +252,8 @@ int system_load(GrievanceSystem *sys, const char *path, char *err, size_t err_si
             if (!parse_long(fields[1], &status) || !parse_long(fields[2], &day) ||
                 status < 1 || status >= STATUS_COUNT ||
                 (Status)status <= complaint_status(current) ||
-                day < history_last_day(&current->history)) {
+                day < history_last_day(&current->history) ||
+                strlen(fields[3]) >= REMARK_LEN) {
                 failed = 1;
                 why = "invalid status record";
             } else {
