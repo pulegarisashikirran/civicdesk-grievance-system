@@ -41,8 +41,7 @@ int system_new_id(const GrievanceSystem *sys)
 {
     int attempt, start, offset;
 
-    /* There are only 9,000 four-digit IDs; the bounded scan below handles exhaustion. */
-    /* Random attempts usually find a free ID quickly and keep insertion order varied. */
+    /* Random attempts usually find a free ID quickly; the bounded scan handles exhaustion. */
     for (attempt = 0; attempt < 64; attempt++) {
         int cid = 1000 + rand() % 9000;
         if (bst_search(&sys->bst, cid) == NULL)
