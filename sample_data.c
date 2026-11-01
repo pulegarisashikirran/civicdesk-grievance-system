@@ -75,8 +75,13 @@ static unsigned rng_next(void)
 Complaint **generate_random_complaints(int n, unsigned long seed)
 {
     int pool_size = ID_MAX - ID_MIN + 1;
-    int *pool = xmalloc((size_t)pool_size * sizeof(int));
-    Complaint **result = xmalloc((size_t)n * sizeof(Complaint *));
+    int *pool;
+    Complaint **result;
+
+    if (n < 0 || n > pool_size)
+        return NULL;
+    pool = xmalloc((size_t)pool_size * sizeof(int));
+    result = xmalloc((size_t)n * sizeof(Complaint *));
     long today = today_day();
     int i;
 
