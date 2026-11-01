@@ -376,7 +376,7 @@ function render() {
 const show = (list, note) => { view = { list, note }; render(); };
 const parseId = value => {
   const raw = String(value).trim();
-  if (!/^\\d+$/.test(raw)) return NaN;
+  if (!/^\d+$/.test(raw)) return NaN;
   const id = Number(raw);
   return Number.isSafeInteger(id) ? id : NaN;
 };
