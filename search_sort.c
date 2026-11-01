@@ -235,10 +235,20 @@ static double elapsed_ms(clock_t start)
 void benchmark_sorting(const int *sizes, int count, SortBenchRow *rows)
 {
     int s, a;
+    if (sizes == NULL || rows == NULL || count <= 0)
+        return;
+
     for (s = 0; s < count; s++) {
         int n = sizes[s];
-        Complaint **data = generate_random_complaints(n, 42);
+        int valid = n >= 0 && n <= 90000;
+        Complaint **data;
         rows[s].n = n;
+        if (!valid) {
+            for (a = 0; a < SORT_ALGORITHM_COUNT; a++)
+                rows[s].ms[a] = 0.0;
+            continue;
+        }
+        data = generate_random_complaints(n, 42);
         for (a = 0; a < SORT_ALGORITHM_COUNT; a++) {
             Complaint **work = copy_array(data, n);       /* every algorithm gets the same input */
             clock_t start = clock();
@@ -253,10 +263,21 @@ void benchmark_sorting(const int *sizes, int count, SortBenchRow *rows)
 SearchBenchResult benchmark_searching(int n, int lookups)
 {
     SearchBenchResult r;
-    Complaint **data = generate_random_complaints(n, 7);
-    Complaint **by_id = copy_array(data, n);
-    Complaint **out = xmalloc((size_t)n * sizeof(Complaint *));
-    int *targets = xmalloc((size_t)lookups * sizeof(int));
+    Complaint **data;
+    Complaint **by_id;
+    Complaint **out;
+    int *targets;
+    if (n <= 0 || n > 90000 || lookups <= 0) {
+        r.n = n;
+        r.lookups = lookups;
+        r.bst_height = 0;
+        r.linear_ms = r.binary_ms = r.bst_ms = 0.0;
+        return r;
+    }
+    data = generate_random_complaints(n, 7);
+    by_id = copy_array(data, n);
+    out = xmalloc((size_t)n * sizeof(Complaint *));
+    targets = xmalloc((size_t)lookups * sizeof(int));
     ComplaintBST tree;
     clock_t start;
     int i;
