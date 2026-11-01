@@ -523,6 +523,8 @@ static int test_load_rejects_invalid_files_and_keeps_data(void)
 {
     static const char *bad_files[] = {
         "HELLO\n",
+        "CIVICDESK 1junk\n",
+        "CIVICDESK 1\nC|999999999999999999999999999|A|X|Roads|2|100\n",
         "CIVICDESK 1\nC|5|A|X|Roads|2|100\nC|5|B|Y|Roads|1|100\n",
         "CIVICDESK 1\nC|5|A|X|Roads|9|100\n",
         "CIVICDESK 1\nS|1|100|Orphan status\n",
