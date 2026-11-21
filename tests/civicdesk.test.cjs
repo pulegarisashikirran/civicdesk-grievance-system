@@ -13,7 +13,7 @@ const source = html.slice(scriptStart + 8, scriptEnd).split("/* ---------- scree
 globalThis.CivicDeskTest = {
   StatusList, Complaint, LinkedQueue, PriorityQueues, UndoStack, BST,
   linearSearch, binarySearch, bubble, selection, insertion, merge, quick,
-  SORTS, sys, add, dashboardStats
+  SORTS, sys, add, dashboardStats, validateComplaintFields, MAX_COMPLAINTS, MAX_IMPORT_BYTES
 };
 `;
 const context = vm.createContext({});
@@ -22,6 +22,17 @@ const C = context.CivicDeskTest;
 
 const complaint = (id, priority = 2) =>
   new C.Complaint(id, "Citizen " + id, "Area " + (id % 3), "Roads", priority, 20000);
+
+test("complaint form validation rejects unsafe or invalid fields", () => {
+  assert.equal(C.validateComplaintFields("  Alex  ", " Shamshabad ", "Water Supply", 0), "");
+  assert.match(C.validateComplaintFields("", "Area", "Roads", 1), /name is required/i);
+  assert.match(C.validateComplaintFields("A".repeat(32), "Area", "Roads", 1), /31 characters/i);
+  assert.match(C.validateComplaintFields("Alex", "A".repeat(32), "Roads", 1), /31 characters/i);
+  assert.match(C.validateComplaintFields("Alex", "Area", "Unknown", 1), /valid department/i);
+  assert.match(C.validateComplaintFields("Alex", "Area", "Roads", 9), /valid priority/i);
+  assert.equal(C.MAX_COMPLAINTS, 10000);
+  assert.equal(C.MAX_IMPORT_BYTES, 5 * 1024 * 1024);
+});
 
 test("dashboard metrics count waiting, active and resolved complaints", () => {
   const items = [complaint(1), complaint(2), complaint(3), complaint(4)];
