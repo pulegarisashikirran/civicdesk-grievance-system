@@ -460,6 +460,31 @@ static int test_benchmark_rejects_invalid_sizes(void)
     return failed_here;
 }
 
+static int test_benchmarks_report_repeated_run_results(void)
+{
+    int failed_here = 0;
+    int sizes[2] = {20, 50};
+    SortBenchRow rows[2];
+    SearchBenchResult result;
+    int i, a;
+
+    benchmark_sorting(sizes, 2, rows);
+    for (i = 0; i < 2; i++) {
+        CHECK(rows[i].n == sizes[i]);
+        for (a = 0; a < SORT_ALGORITHM_COUNT; a++)
+            CHECK(rows[i].ms[a] >= 0.0);
+    }
+
+    result = benchmark_searching(250, 40);
+    CHECK(result.n == 250);
+    CHECK(result.lookups == 40);
+    CHECK(result.bst_height > 0);
+    CHECK(result.linear_ms >= 0.0);
+    CHECK(result.binary_ms >= 0.0);
+    CHECK(result.bst_ms >= 0.0);
+    return failed_here;
+}
+
 static int test_empty_system_starts_clean(void)
 {
     GrievanceSystem sys;
@@ -808,6 +833,7 @@ int main(void)
     RUN(test_system_grows_beyond_initial_capacity);
 
     RUN(test_benchmark_rejects_invalid_sizes);
+    RUN(test_benchmarks_report_repeated_run_results);
     RUN(test_empty_system_starts_clean);
     RUN(test_empty_bst_search_and_traversal);
     RUN(test_priority_queue_counts_are_consistent);
