@@ -358,7 +358,7 @@ static void benchmark_menu(void)
     SearchBenchResult r;
     int i, a;
 
-    printf("\n--- Benchmark (random data, times in milliseconds) ---\n");
+    printf("\n--- Benchmark (random data, median of %d runs; times in milliseconds) ---\n", BENCHMARK_RUNS);
     printf("Running sorting benchmark, please wait...\n");
     fflush(stdout);
     benchmark_sorting(sizes, 3, rows);
@@ -375,7 +375,7 @@ static void benchmark_menu(void)
     }
 
     r = benchmark_searching(20000, 500);
-    printf("\n  Searching: %d lookups in %d complaints (BST height = %d)\n",
+    printf("\n  Searching: %d lookups in %d complaints (AVL tree height = %d)\n",
            r.lookups, r.n, r.bst_height);
     printf("  %-16s%10.2f ms\n", "Linear Search", r.linear_ms);
     printf("  %-16s%10.2f ms\n", "Binary Search", r.binary_ms);
