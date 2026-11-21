@@ -9,7 +9,7 @@ Repository: https://github.com/pulegarisashikirran/civicdesk-grievance-system
 
 Live demo: https://pulegarisashikirran.github.io/civicdesk-grievance-system/
 
-**Project guides:** [Architecture and data flow](docs/ARCHITECTURE.md) · [Testing and CI](docs/TESTING.md)
+**Project guides:** [Architecture and data flow](docs/ARCHITECTURE.md) · [Testing and CI](docs/TESTING.md) · [Resume and interview guide](docs/PORTFOLIO.md)
 
 The live demo is a JavaScript version of the same logic, made for easy demonstration in a browser. The C program in this repository is the main project.
 
