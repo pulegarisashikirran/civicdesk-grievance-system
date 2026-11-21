@@ -1,17 +1,31 @@
-# CivicDesk — Public Grievance Redressal System (C)
+# CivicDesk — Public Grievance Redressal System
 
 [![CI](https://github.com/pulegarisashikirran/civicdesk-grievance-system/actions/workflows/c-ci.yml/badge.svg?branch=civicdesk-reliability-upgrades)](https://github.com/pulegarisashikirran/civicdesk-grievance-system/actions/workflows/c-ci.yml)
 
+**A data-structures-driven complaint management system built in C99, with a browser-based JavaScript demo.**
 
-CivicDesk is a menu-driven complaint-management application and data-structures project written in **C**. Citizens' complaints are registered, prioritised through three linked-list queues, tracked through a per-complaint status history, indexed in a self-balancing AVL tree, and reported with classical searching and sorting algorithms. Manual complaint status updates can be reversed using a linked-list-based undo stack. All names, areas and complaints in the sample data are fictional, and nothing is sent to any real government system.
+CivicDesk models how public-service complaints can be registered, prioritised, tracked, searched and reported. The C application combines three linked-list priority queues, per-complaint status histories, a stack-based undo feature and a self-balancing AVL tree. Five sorting algorithms and three search approaches support reporting and performance comparisons.
 
-Repository: https://github.com/pulegarisashikirran/civicdesk-grievance-system
+<details>
+<summary><strong>Project at a glance</strong></summary>
 
-Live demo: https://pulegarisashikirran.github.io/civicdesk-grievance-system/
+| | |
+|---|---|
+| Core language | C99 (manual memory management; no external C libraries) |
+| Browser demo | HTML, CSS and JavaScript |
+| Data structures | Linked lists, FIFO queues, stack and AVL tree |
+| Algorithms | Linear search, binary search and five sorting algorithms |
+| Automated verification | 55 tests: 34 C, 19 JavaScript and 2 Playwright end-to-end tests |
+| CI | GitHub Actions, including AddressSanitizer and UndefinedBehaviorSanitizer |
+| Project scope | Educational, single-user demonstration; not connected to a government system |
 
-**Project guides:** [Architecture and data flow](docs/ARCHITECTURE.md) · [Testing and CI](docs/TESTING.md) · [Resume and interview guide](docs/PORTFOLIO.md)
+</details>
 
-The live demo is a JavaScript version of the same logic, made for easy demonstration in a browser. The C program in this repository is the main project.
+**[▶ Open the live browser demo](https://pulegarisashikirran.github.io/civicdesk-grievance-system/)** · [Browse source code](https://github.com/pulegarisashikirran/civicdesk-grievance-system/tree/civicdesk-reliability-upgrades) · [View development commits](https://github.com/pulegarisashikirran/civicdesk-grievance-system/commits/civicdesk-reliability-upgrades/)
+
+**Technical guides:** [Architecture and data flow](docs/ARCHITECTURE.md) · [Testing and CI](docs/TESTING.md) · [Resume and interview guide](docs/PORTFOLIO.md)
+
+The C99 console application is the main implementation. The separate JavaScript browser demo reproduces the core data-structure workflows for convenient interactive demonstration; it does not connect to the C executable. All sample names, areas and complaints are fictional. No data is sent to a real government system.
 
 ## What is implemented
 
