@@ -22,7 +22,7 @@ The live demo is a JavaScript version of the same logic, made for easy demonstra
 * Pending-day calculation that stops counting once a complaint is resolved.
 * 12 pre-loaded sample complaints (some already in progress or resolved) so every feature can be demonstrated immediately.
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
-* 34 automated C tests and 15 JavaScript tests covering the data structures, algorithms, saving and loading, and system rules.
+* 34 automated C tests and 16 JavaScript tests covering the data structures, algorithms, saving and loading, and system rules.
 * Complete memory clean-up on exit: every node and complaint is freed; GitHub Actions runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Data Structures & Algorithms — Topics Used, Locations & Logic
@@ -395,7 +395,7 @@ search_sort.h/.c      linear_search, binary_search, five sorts, comparators, ben
 sample_data.h/.c      12 sample complaints and a random complaint generator for benchmarks
 util.h/.c             Safe allocation, string helpers, date conversion
 test_civicdesk.c      33 automated C tests for the structures, algorithms, data files and system rules
- tests/civicdesk.test.cjs 15 automated JavaScript tests for browser-side data structures and algorithms
+ tests/civicdesk.test.cjs 16 automated JavaScript tests for browser-side data structures and algorithms
  .github/workflows/c-ci.yml Builds, tests and runs C memory-safety checks on GitHub Actions
 Makefile              Builds civicdesk and test_civicdesk
 index.html            Web demo (JavaScript version of the same logic, hosted on GitHub Pages)
@@ -422,7 +422,11 @@ The requested direction is a complaint-management project built only on the topi
 
 **Still pending / sensible next steps:** sharing data between programs through a server and a database, deletion support and further AVL stress tests, a graphical or web interface, and more tests for the menu input handling.
 
-**JavaScript test coverage:** The 15-test suite checks status history, pending days, FIFO and priority queues, undo-stack behavior, BST operations, linear and binary search, all five sorting algorithms, empty/single-item inputs and merge-sort stability. GitHub Actions runs both test suites and also compiles and runs the C suite with AddressSanitizer and UndefinedBehaviorSanitizer.
+**JavaScript test coverage:** The 16-test suite checks status history, pending days, FIFO and priority queues, undo-stack behavior, BST operations, linear and binary search, all five sorting algorithms, empty/single-item inputs and merge-sort stability. GitHub Actions runs both test suites and also compiles and runs the C suite with AddressSanitizer and UndefinedBehaviorSanitizer.
+
+## Browser dashboard
+
+The browser dashboard displays live overview metrics for total, waiting, active and resolved complaints, plus a resolution-rate indicator that updates after each action. These metrics are calculated from complaint status history and are covered by a dedicated JavaScript test.
 
 ## Project purpose
 
