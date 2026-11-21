@@ -395,7 +395,7 @@ search_sort.h/.c      linear_search, binary_search, five sorts, comparators, ben
 sample_data.h/.c      12 sample complaints and a random complaint generator for benchmarks
 util.h/.c             Safe allocation, string helpers, date conversion
 test_civicdesk.c      34 automated C tests for the structures, algorithms, data files and system rules
- tests/civicdesk.test.cjs 17 automated JavaScript tests for browser-side data structures and algorithms
+ tests/civicdesk.test.cjs 19 automated JavaScript tests for browser-side data structures and algorithms
  .github/workflows/c-ci.yml Builds, tests and runs C memory-safety checks on GitHub Actions
 Makefile              Builds civicdesk and test_civicdesk
 index.html            Web demo (JavaScript version of the same logic, hosted on GitHub Pages)
@@ -422,7 +422,7 @@ The requested direction is a complaint-management project built only on the topi
 
 **Still pending / sensible next steps:** sharing data between programs through a server and a database, deletion support and further AVL stress tests, a graphical or web interface, and more tests for the menu input handling.
 
-**JavaScript test coverage:** The 17-test suite checks status history, pending days, FIFO and priority queues, undo-stack behavior, BST operations, linear and binary search, all five sorting algorithms, empty/single-item inputs, merge-sort stability and complaint form validation. GitHub Actions runs both test suites and also compiles and runs the C suite with AddressSanitizer and UndefinedBehaviorSanitizer.
+**JavaScript test coverage:** The 19-test suite checks status history, pending days, FIFO and priority queues, undo-stack behavior, BST operations, linear and binary search, all five sorting algorithms, empty/single-item inputs, merge-sort stability and complaint form validation, keyboard activation, skip navigation, and accessible complaint-row selection. GitHub Actions runs both test suites and also compiles and runs the C suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Browser dashboard
 
