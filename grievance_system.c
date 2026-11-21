@@ -232,7 +232,7 @@ static int finish_complaint(GrievanceSystem *tmp, Complaint **current, int *load
 
 int system_load(GrievanceSystem *sys, const char *path, char *err, size_t err_size)
 {
-    FILE *f = fopen(path, "r");
+    FILE *f;
     GrievanceSystem tmp;
     Complaint *current = NULL;
     char line[512];
@@ -240,6 +240,13 @@ int system_load(GrievanceSystem *sys, const char *path, char *err, size_t err_si
     const char *why = "";
     int line_no = 1, loaded = 0, failed = 0;
 
+    /* Validate arguments before opening the file or touching the current system. */
+    if (sys == NULL || path == NULL || path[0] == '\0') {
+        set_error(err, err_size, "invalid system or file path", 0);
+        return -1;
+    }
+
+    f = fopen(path, "r");
     if (f == NULL) {
         set_error(err, err_size, "the file could not be opened", 0);
         return -1;
