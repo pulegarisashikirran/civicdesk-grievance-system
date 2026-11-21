@@ -95,8 +95,8 @@ body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
 <div class="rail" id="desk">
   <section class="card">
     <h2>File a complaint</h2><p class="sub">It joins the waiting line for its priority.</p>
-    <label for="nm">Citizen name</label><input id="nm" autocomplete="off">
-    <label for="ar">Area</label><input id="ar" autocomplete="off">
+    <label for="nm">Citizen name</label><input id="nm" maxlength="31" autocomplete="off">
+    <label for="ar">Area</label><input id="ar" maxlength="31" autocomplete="off">
     <label for="dp">Department</label><select id="dp"></select>
     <label for="pr">Priority</label><select id="pr"></select>
     <div class="row"><button id="bFile">File complaint</button></div>
@@ -108,7 +108,7 @@ body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
     <label for="cid">Complaint ID (click a row to fill it)</label><input id="cid" inputmode="numeric" autocomplete="off">
     <label for="to">Move to</label>
     <select id="to"><option value="2">In Progress</option><option value="3">Resolved</option></select>
-    <label for="rm">Remarks (optional)</label><input id="rm" autocomplete="off">
+    <label for="rm">Remarks (optional)</label><input id="rm" maxlength="63" autocomplete="off">
     <div class="row"><button id="bUpd">Update status</button><button id="bUndo" class="alt">Undo last update</button></div>
   </section>
 
@@ -185,11 +185,23 @@ const PRI = ["Urgent", "High", "Normal"];
 const ST = ["Filed", "Assigned", "In Progress", "Resolved"];
 const DEPTS = ["Water Supply", "Electricity", "Roads", "Sanitation", "Street Lights"];
 const DAY = 864e5;
+const MAX_COMPLAINTS = 10000;
+const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 const now = new Date();
 const TODAY = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt = d => new Date(d * DAY).toISOString().slice(0, 10);
+
+function validateComplaintFields(name, area, dept, priority) {
+  if (typeof name !== "string" || !name.trim()) return "Citizen name is required.";
+  if (typeof area !== "string" || !area.trim()) return "Area is required.";
+  if (name.trim().length > 31) return "Citizen name must be 31 characters or fewer.";
+  if (area.trim().length > 31) return "Area must be 31 characters or fewer.";
+  if (typeof dept !== "string" || !DEPTS.includes(dept)) return "Choose a valid department.";
+  if (!Number.isInteger(priority) || priority < 0 || priority >= PRI.length) return "Choose a valid priority.";
+  return "";
+}
 
 /* ---------- singly linked list: status history of one complaint ---------- */
 class SNode { constructor(s, r, d) { this.status = s; this.remarks = r; this.day = d; this.next = null; } }
@@ -413,7 +425,9 @@ const findC = () => { const id = getId(); return Number.isNaN(id) ? null : sys.b
 
 function fileComplaint() {
   const name = $("nm").value.trim(), area = $("ar").value.trim();
-  if (!name || !area) return toast("Enter the citizen name and the area.");
+  const validation = validateComplaintFields(name, area, $("dp").value, Number($("pr").value));
+  if (validation) return toast(validation);
+  if (sys.all.length >= MAX_COMPLAINTS) return toast(`The browser version supports up to ${MAX_COMPLAINTS} complaints.`);
   let id = null;
   for (let attempt = 0; attempt < 128; attempt++) {
     const candidate = 1000 + Math.floor(Math.random() * 9000);
@@ -530,6 +544,8 @@ function exportData() {
   toast(`Exported ${sys.all.length} complaints to civicdesk_data.txt.`);
 }
 function parseData(text) {
+  if (typeof text !== "string" || text.length > MAX_IMPORT_BYTES)
+    throw new Error("file is too large (maximum 5 MB)");
   const lines = text.split(/\r?\n/), list = [], ids = new Set();
   if ((lines[0] || "").replace(/\r$/, "") !== "CIVICDESK 1") throw new Error("this is not a CivicDesk data file");
   let cur = null;
@@ -539,8 +555,9 @@ function parseData(text) {
     if (f[0] === "C" && f.length === 7) {
       const id = num(f[1]), pri = num(f[5]), filed = num(f[6]);
       if (![id, pri, filed].every(Number.isSafeInteger) || id < 1 || id > 999999 ||
-          pri < 0 || pri > 2 || filed < 0 || filed > TODAY || !f[2] || !f[3] || !f[4] ||
-          f[2].length > 31 || f[3].length > 31 || f[4].length > 23) bad("invalid complaint record");
+          filed < 0 || filed > TODAY || validateComplaintFields(f[2], f[3], f[4], pri))
+        bad("invalid complaint record");
+      if (list.length >= MAX_COMPLAINTS) bad(`more than ${MAX_COMPLAINTS} complaints`);
       if (ids.has(id)) bad("duplicate complaint ID");
       ids.add(id); cur = new Complaint(id, f[2], f[3], f[4], pri, filed); list.push(cur);
     } else if (f[0] === "S" && f.length === 4 && cur) {
@@ -553,6 +570,8 @@ function parseData(text) {
   return list;
 }
 function importData(file) {
+  if (!file || file.size > MAX_IMPORT_BYTES)
+    return toast("Could not import: file is too large (maximum 5 MB).");
   file.text().then(text => {
     const list = parseData(text);                       // throws before anything is changed
     Object.assign(sys, { bst: new BST(), pq: new PriorityQueues(), undo: new UndoStack(), all: [] });
