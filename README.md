@@ -22,8 +22,8 @@ The live demo is a JavaScript version of the same logic, made for easy demonstra
 * Pending-day calculation that stops counting once a complaint is resolved.
 * 12 pre-loaded sample complaints (some already in progress or resolved) so every feature can be demonstrated immediately.
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
-* 31 automated unit tests covering the data structures, algorithms, saving and loading, and system rules.
-* Complete memory clean-up on exit: every node and complaint is freed (checked with AddressSanitizer).
+* 32 automated C tests and 15 JavaScript tests covering the data structures, algorithms, saving and loading, and system rules.
+* Complete memory clean-up on exit: every node and complaint is freed; GitHub Actions runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Data Structures & Algorithms — Topics Used, Locations & Logic
 
@@ -404,7 +404,9 @@ bst.h/.c              Binary Search Tree of complaints keyed by ID
 search_sort.h/.c      linear_search, binary_search, five sorts, comparators, benchmarks
 sample_data.h/.c      12 sample complaints and a random complaint generator for benchmarks
 util.h/.c             Safe allocation, string helpers, date conversion
-test_civicdesk.c      31 automated tests for the structures, algorithms, data files and system rules
+test_civicdesk.c      32 automated C tests for the structures, algorithms, data files and system rules
+ tests/civicdesk.test.cjs 15 automated JavaScript tests for browser-side data structures and algorithms
+ .github/workflows/c-ci.yml Builds, tests and runs C memory-safety checks on GitHub Actions
 Makefile              Builds civicdesk and test_civicdesk
 index.html            Web demo (JavaScript version of the same logic, hosted on GitHub Pages)
 README.md             This document
@@ -426,9 +428,11 @@ The requested direction is a complaint-management project built only on the topi
 
 **Implemented in this version:** complaint registration; three-level priority queues; status history with linked lists; undo with a stack; AVL tree index; AVL, binary and linear search; five sorting algorithms with timing; benchmark; sample data; saving and loading of data files; automated tests; full memory clean-up.
 
-**Automated test coverage:** The 31-test suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, that quick sort handles sorted and reversed input, that merge sort is stable, that AVL search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data.
+**Automated test coverage:** The 32-test C suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, that quick sort handles sorted and reversed input, that merge sort is stable, that AVL search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data.
 
 **Still pending / sensible next steps:** sharing data between programs through a server and a database, deletion support and further AVL stress tests, a graphical or web interface, and more tests for the menu input handling.
+
+**JavaScript test coverage:** The 15-test suite checks status history, pending days, FIFO and priority queues, undo-stack behavior, BST operations, linear and binary search, all five sorting algorithms, empty/single-item inputs and merge-sort stability. GitHub Actions runs both test suites and also compiles and runs the C suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Project purpose
 
