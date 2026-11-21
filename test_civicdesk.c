@@ -188,20 +188,68 @@ static int test_duplicate_id_rejected(void)
     return failed_here;
 }
 
-static int test_sorted_insertion_makes_a_straight_line(void)
+static int test_sorted_insertion_keeps_avl_balanced(void)
 {
     ComplaintBST tree;
-    Complaint *items[10];
-    int failed_here = 0, i;
+    Complaint *items[1000];
+    Complaint **sorted;
+    int failed_here = 0, i, n = 0;
+
     bst_init(&tree);
-    for (i = 0; i < 10; i++) {
-        items[i] = complaint_create(i + 1, "A", "X", "Roads", PRIORITY_NORMAL, today_day());
-        bst_insert(&tree, items[i]);
+    for (i = 0; i < 1000; i++) {
+        items[i] = complaint_create(i + 1, "A", "X", "Roads",
+                                    PRIORITY_NORMAL, today_day());
+        CHECK(bst_insert(&tree, items[i]) == 1);
     }
-    CHECK(bst_height(&tree) == 10);                               /* worst case: O(n) */
+
+    CHECK(tree.size == 1000);
+    CHECK(bst_height(&tree) <= 12); /* sorted input must not create a linear-height tree */
+    for (i = 0; i < 1000; i++)
+        CHECK(bst_search(&tree, i + 1) == items[i]);
+
+    sorted = bst_inorder(&tree, &n);
+    CHECK(n == 1000);
+    for (i = 1; i < n; i++)
+        CHECK(sorted[i - 1]->cid < sorted[i]->cid);
+
+    free(sorted);
     bst_free(&tree);
-    for (i = 0; i < 10; i++)
+    for (i = 0; i < 1000; i++)
         complaint_free(items[i]);
+    return failed_here;
+}
+
+static int test_avl_all_four_rotation_cases(void)
+{
+    static const int sequences[4][3] = {
+        {30, 20, 10}, /* left-left */
+        {10, 20, 30}, /* right-right */
+        {30, 10, 20}, /* left-right */
+        {10, 30, 20}  /* right-left */
+    };
+    int failed_here = 0, i, j;
+
+    for (i = 0; i < 4; i++) {
+        ComplaintBST tree;
+        Complaint *items[3];
+
+        bst_init(&tree);
+        for (j = 0; j < 3; j++) {
+            items[j] = complaint_create(sequences[i][j], "A", "X", "Roads",
+                                        PRIORITY_NORMAL, today_day());
+            CHECK(bst_insert(&tree, items[j]) == 1);
+        }
+
+        CHECK(tree.root != NULL && tree.root->complaint->cid == 20);
+        CHECK(bst_height(&tree) == 2);
+        CHECK(tree.size == 3);
+        for (j = 0; j < 3; j++)
+            CHECK(bst_search(&tree, sequences[i][j]) == items[j]);
+
+        bst_free(&tree);
+        for (j = 0; j < 3; j++)
+            complaint_free(items[j]);
+    }
     return failed_here;
 }
 
@@ -718,7 +766,8 @@ int main(void)
     RUN(test_missing_id_returns_null);
     RUN(test_linear_search_by_area);
     RUN(test_duplicate_id_rejected);
-    RUN(test_sorted_insertion_makes_a_straight_line);
+    RUN(test_sorted_insertion_keeps_avl_balanced);
+    RUN(test_avl_all_four_rotation_cases);
     RUN(test_linked_queue_is_fifo);
     RUN(test_priority_order_then_fifo_inside_a_priority);
     RUN(test_status_history_append_and_remove_last);
