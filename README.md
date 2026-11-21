@@ -1,10 +1,15 @@
 # CivicDesk — Public Grievance Redressal System (C)
 
+[![CI](https://github.com/pulegarisashikirran/civicdesk-grievance-system/actions/workflows/c-ci.yml/badge.svg?branch=civicdesk-reliability-upgrades)](https://github.com/pulegarisashikirran/civicdesk-grievance-system/actions/workflows/c-ci.yml)
+
+
 CivicDesk is a menu-driven complaint-management application and data-structures project written in **C**. Citizens' complaints are registered, prioritised through three linked-list queues, tracked through a per-complaint status history, indexed in a self-balancing AVL tree, and reported with classical searching and sorting algorithms. Manual complaint status updates can be reversed using a linked-list-based undo stack. All names, areas and complaints in the sample data are fictional, and nothing is sent to any real government system.
 
 Repository: https://github.com/pulegarisashikirran/civicdesk-grievance-system
 
 Live demo: https://pulegarisashikirran.github.io/civicdesk-grievance-system/
+
+**Project guides:** [Architecture and data flow](docs/ARCHITECTURE.md) · [Testing and CI](docs/TESTING.md)
 
 The live demo is a JavaScript version of the same logic, made for easy demonstration in a browser. The C program in this repository is the main project.
 
@@ -443,11 +448,13 @@ The browser suite uses Playwright and Chromium to test the actual dashboard in a
 
 Run it locally after installing Playwright:
 
+On Windows PowerShell, the `.cmd` launchers avoid PowerShell execution-policy blocks on the `.ps1` wrappers. On macOS/Linux, use `npm` and `npx`.
+
+
 ```powershell
-npm init -y
-npm install --no-save @playwright/test
-npx playwright install chromium
-npx playwright test
+npm.cmd install --no-save @playwright/test
+npx.cmd playwright install chromium
+npx.cmd playwright test
 ```
 
 The suite checks the main citizen/officer workflow, dashboard metric updates, persistence after refresh, and importing/exporting the shared `CIVICDESK 1` data format. GitHub Actions runs these browser tests separately from the C and JavaScript unit-test jobs.
