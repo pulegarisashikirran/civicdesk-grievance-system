@@ -20,7 +20,7 @@ typedef struct {
 } LinkedQueue;
 
 void       queue_init(LinkedQueue *q);
-void       queue_enqueue(LinkedQueue *q, Complaint *c);   /* O(1) */
+int        queue_enqueue(LinkedQueue *q, Complaint *c);   /* O(1), 0 for invalid input */
 Complaint *queue_dequeue(LinkedQueue *q);                 /* O(1), NULL if empty */
 Complaint *queue_peek(const LinkedQueue *q);
 int        queue_is_empty(const LinkedQueue *q);
@@ -31,7 +31,7 @@ typedef struct {
 } PriorityQueueManager;
 
 void       pqm_init(PriorityQueueManager *m);
-void       pqm_enqueue(PriorityQueueManager *m, Complaint *c);
+int        pqm_enqueue(PriorityQueueManager *m, Complaint *c); /* 0 for invalid input */
 Complaint *pqm_dequeue_next(PriorityQueueManager *m);     /* Urgent -> High -> Normal */
 int        pqm_count(const PriorityQueueManager *m, Priority p);
 int        pqm_total(const PriorityQueueManager *m);
