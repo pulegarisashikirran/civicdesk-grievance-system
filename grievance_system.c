@@ -22,6 +22,11 @@ void system_init(GrievanceSystem *sys)
 
 int system_add_complaint(GrievanceSystem *sys, Complaint *c)
 {
+    /* Reject invalid input before touching the BST or any other structure. */
+    if (sys == NULL || c == NULL ||
+        (int)c->priority < 0 || (int)c->priority >= PRIORITY_COUNT)
+        return 0;
+
     if (!bst_insert(&sys->bst, c))                  /* rejects duplicate IDs */
         return 0;
 
