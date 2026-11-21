@@ -333,6 +333,30 @@ The program uses the C `clock()` CPU-time timer and displays milliseconds to two
 
 **How to run:** Build and launch the C application, choose menu option `8`, and record the output along with your processor, operating system and compiler version before publishing machine-specific performance results. Actual timings vary with hardware, compiler optimization and system load.
 
+#### Recorded local results
+
+The following measurements were captured from a local Windows run using the optimized C build. Each value is the median of three runs, in milliseconds.
+
+**Sorting**
+
+| Complaints | Bubble Sort | Selection Sort | Insertion Sort | Merge Sort | Quick Sort |
+|---:|---:|---:|---:|---:|---:|
+| 1,000 | 39.00 | 31.00 | 15.00 | 1.00 | 1.00 |
+| 5,000 | 1,311.00 | 1,002.00 | 482.00 | 4.00 | 5.00 |
+| 10,000 | 5,513.00 | 3,966.00 | 2,288.00 | 9.00 | 13.00 |
+
+**Searching**
+
+| Algorithm | Dataset | Lookups | Median time |
+|---|---:|---:|---:|
+| Linear Search | 20,000 complaints | 500 | 30.00 ms |
+| Binary Search | 20,000 complaints | 500 | 0.00 ms |
+| AVL Tree Search | 20,000 complaints | 500 | 1.00 ms |
+
+The AVL tree height was 17 for this generated dataset. Binary Search's displayed `0.00 ms` indicates a time below the output's two-decimal precision.
+
+**Observations:** The quadratic sorting algorithms take substantially longer as the input grows, while Merge Sort and Quick Sort remain much faster on these generated datasets. The search measurements also show why linear scanning can be more expensive than searching an indexed or sorted collection. These are observations from this one local environment, not universal performance guarantees.
+
 
 ## Sample Outputs
 
