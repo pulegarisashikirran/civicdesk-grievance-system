@@ -4,10 +4,12 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 
 const html = fs.readFileSync("index.html", "utf8");
-const match = html.match(/<script>([\\s\\S]*?)<\\/script>/);
-assert.ok(match, "index.html must contain the CivicDesk application script");
+const scriptStart = html.indexOf("<script>");
+const scriptEnd = html.indexOf("</script>", scriptStart + 8);
+assert.notEqual(scriptStart, -1, "index.html must contain the CivicDesk application script");
+assert.notEqual(scriptEnd, -1, "CivicDesk application script must be closed");
 
-const source = match[1].split("/* ---------- screen ---------- */")[0] + `
+const source = html.slice(scriptStart + 8, scriptEnd).split("/* ---------- screen ---------- */")[0] + `
 globalThis.CivicDeskTest = {
   StatusList, Complaint, LinkedQueue, PriorityQueues, UndoStack, BST,
   linearSearch, binarySearch, bubble, selection, insertion, merge, quick,
