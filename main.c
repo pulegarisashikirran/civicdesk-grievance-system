@@ -379,7 +379,7 @@ static void benchmark_menu(void)
            r.lookups, r.n, r.bst_height);
     printf("  %-16s%10.2f ms\n", "Linear Search", r.linear_ms);
     printf("  %-16s%10.2f ms\n", "Binary Search", r.binary_ms);
-    printf("  %-16s%10.2f ms\n", "BST Search", r.bst_ms);
+    printf("  %-16s%10.2f ms\n", "AVL Search", r.bst_ms);
 }
 
 static void ask_file_name(char *path, size_t size)
