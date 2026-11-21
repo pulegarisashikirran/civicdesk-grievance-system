@@ -22,7 +22,7 @@ The live demo is a JavaScript version of the same logic, made for easy demonstra
 * Pending-day calculation that stops counting once a complaint is resolved.
 * 12 pre-loaded sample complaints (some already in progress or resolved) so every feature can be demonstrated immediately.
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
-* 33 automated C tests and 15 JavaScript tests covering the data structures, algorithms, saving and loading, and system rules.
+* 34 automated C tests and 15 JavaScript tests covering the data structures, algorithms, saving and loading, and system rules.
 * Complete memory clean-up on exit: every node and complaint is freed; GitHub Actions runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Data Structures & Algorithms — Topics Used, Locations & Logic
@@ -323,50 +323,16 @@ gcc -std=c99 -g -fsanitize=address,undefined -o civicdesk_check main.c util.c st
 
 The benchmark option (menu item 8) runs the sorting and searching algorithms on generated complaint data. Larger datasets take longer because Bubble, Selection and Insertion Sort have O(n²) time complexity.
 
-### Benchmark results
+### Benchmark methodology
 
-CivicDesk includes a benchmarking module that compares five sorting algorithms and three searching methods using randomly generated complaint data.
+CivicDesk benchmarks all five sorting algorithms at 1,000, 5,000 and 10,000 complaints. It also compares Linear Search, Binary Search and AVL Tree Search using 500 lookups in a dataset of 20,000 complaints.
 
-All execution times below are actual measurements captured from the CivicDesk C application. Times are displayed in milliseconds and may vary depending on hardware, compiler optimization and system load.
+To reduce the effect of one unusually fast or slow measurement, each algorithm is timed three times and the **median** is reported. Sorting input arrays are copied before the timer starts, so the reported sort time excludes the cost of preparing a fresh input array. The generated datasets use fixed seeds so repeated runs use reproducible input data.
 
-#### Sorting Performance
+The program uses the C `clock()` CPU-time timer and displays milliseconds to two decimal places. Very short operations may therefore display as `0.00 ms`; this means the measurement is below the displayed precision, not that the operation took literally no time.
 
-| Complaints (n) | Bubble Sort | Selection Sort | Insertion Sort | Merge Sort | Quick Sort |
-|---:|---:|---:|---:|---:|---:|
-| 1,000 | 39.00 ms | 32.00 ms | 17.00 ms | 1.00 ms | 1.00 ms |
-| 5,000 | 1,077.00 ms | 1,030.00 ms | 529.00 ms | 5.00 ms | 6.00 ms |
-| 10,000 | 6,354.00 ms | 5,352.00 ms | 2,523.00 ms | 18.00 ms | 16.00 ms |
+**How to run:** Build and launch the C application, choose menu option `8`, and record the output along with your processor, operating system and compiler version before publishing machine-specific performance results. Actual timings vary with hardware, compiler optimization and system load.
 
-#### Searching Performance
-
-The searching benchmark was performed using 500 lookups in a dataset containing 20,000 complaints.
-
-| Searching Algorithm | Execution Time |
-|---|---:|
-| Linear Search | 133.00 ms |
-| Binary Search | 0.00 ms |
-| BST Search | 1.00 ms |
-
-**Benchmark details:**
-- Dataset size: 20,000 complaints
-- Number of search operations: 500
-- BST height: 35
-- Data type: Randomly generated complaint data
-- Time unit: Milliseconds
-
-*Note: Binary Search displaying 0.00 ms means its measured execution time was below the timer's displayed precision.*
-
-#### Performance Analysis
-
-- **Bubble Sort:** Execution time increases significantly with larger datasets due to O(n²) average and worst-case complexity.
-- **Selection Sort:** Also has O(n²) time complexity.
-- **Insertion Sort:** Performs better than Bubble and Selection Sort in these measurements.
-- **Merge Sort:** Demonstrates efficient performance with O(n log n) time complexity.
-- **Quick Sort:** Shows competitive performance on the tested random datasets, with average O(n log n) complexity.
-- **Binary Search:** Provides efficient lookup on sorted data with O(log n) time complexity.
-- **BST Search:** Provides efficient lookup with average O(log n) and worst-case O(n) complexity.
-
-Actual execution times depend on hardware, compiler settings, dataset and system conditions.
 
 ## Sample Outputs
 
@@ -428,7 +394,7 @@ The requested direction is a complaint-management project built only on the topi
 
 **Implemented in this version:** complaint registration; three-level priority queues; status history with linked lists; undo with a stack; AVL tree index; AVL, binary and linear search; five sorting algorithms with timing; benchmark; sample data; saving and loading of data files; automated tests; full memory clean-up.
 
-**Automated test coverage:** The 33-test C suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, that quick sort handles sorted and reversed input, that merge sort is stable, that AVL search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data; null system pointers, null paths and empty paths are rejected safely.
+**Automated test coverage:** The 34-test C suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, that quick sort handles sorted and reversed input, that merge sort is stable, that AVL search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data; null system pointers, null paths and empty paths are rejected safely.
 
 **Still pending / sensible next steps:** sharing data between programs through a server and a database, deletion support and further AVL stress tests, a graphical or web interface, and more tests for the menu input handling.
 
