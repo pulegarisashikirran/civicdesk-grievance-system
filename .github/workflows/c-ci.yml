@@ -36,3 +36,23 @@ jobs:
 
       - name: Run JavaScript tests
         run: node --test tests/civicdesk.test.cjs
+
+  memory-safety:
+    name: Memory safety (AddressSanitizer + UBSan)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build C tests with sanitizers
+        run: |
+          gcc -std=c99 -Wall -Wextra -pedantic -g -O1 \
+            -fsanitize=address,undefined -fno-omit-frame-pointer \
+            -o test_civicdesk_sanitized test_civicdesk.c util.c status_list.c complaint.c bst.c queues.c undo_stack.c search_sort.c sample_data.c grievance_system.c
+
+      - name: Run C tests with sanitizers
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ./test_civicdesk_sanitized
