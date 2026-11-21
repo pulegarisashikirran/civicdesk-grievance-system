@@ -643,6 +643,71 @@ static int test_save_replaces_separator_characters(void)
     return failed_here;
 }
 
+
+static int test_queue_rejects_invalid_inputs(void)
+{
+    LinkedQueue q;
+    PriorityQueueManager manager;
+    Complaint *c = complaint_create(7001, "Test", "Area", "Roads",
+                                    PRIORITY_NORMAL, today_day());
+    int failed_here = 0;
+
+    queue_init(&q);
+    pqm_init(&manager);
+
+    CHECK(queue_enqueue(NULL, c) == 0);
+    CHECK(queue_enqueue(&q, NULL) == 0);
+    CHECK(queue_enqueue(&q, c) == 1);
+    CHECK(queue_peek(&q) == c);
+    CHECK(queue_dequeue(&q) == c);
+    CHECK(queue_dequeue(NULL) == NULL);
+    CHECK(queue_peek(NULL) == NULL);
+    CHECK(queue_is_empty(NULL));
+
+    CHECK(pqm_enqueue(NULL, c) == 0);
+    CHECK(pqm_enqueue(&manager, NULL) == 0);
+    c->priority = (Priority)PRIORITY_COUNT;
+    CHECK(pqm_enqueue(&manager, c) == 0);
+    CHECK(pqm_total(&manager) == 0);
+    CHECK(pqm_count(&manager, (Priority)PRIORITY_COUNT) == 0);
+
+    c->priority = PRIORITY_NORMAL;
+    CHECK(pqm_enqueue(&manager, c) == 1);
+    CHECK(pqm_total(&manager) == 1);
+    CHECK(pqm_dequeue_next(&manager) == c);
+    CHECK(pqm_dequeue_next(NULL) == NULL);
+
+    queue_free(&q);
+    queue_free(NULL);
+    pqm_free(&manager);
+    pqm_free(NULL);
+    complaint_free(c);
+    return failed_here;
+}
+
+static int test_system_rejects_invalid_complaints(void)
+{
+    GrievanceSystem sys;
+    Complaint *bad;
+    int failed_here = 0;
+
+    system_init(&sys);
+    CHECK(system_add_complaint(NULL, NULL) == 0);
+    CHECK(system_add_complaint(&sys, NULL) == 0);
+
+    bad = complaint_create(7002, "Test", "Area", "Roads",
+                           PRIORITY_NORMAL, today_day());
+    bad->priority = (Priority)PRIORITY_COUNT;
+    CHECK(system_add_complaint(&sys, bad) == 0);
+    CHECK(sys.count == 0);
+    CHECK(sys.bst.size == 0);
+    CHECK(pqm_total(&sys.queues) == 0);
+
+    complaint_free(bad);
+    system_free(&sys);
+    return failed_here;
+}
+
 int main(void)
 {
     printf("CivicDesk tests\n");
@@ -670,6 +735,8 @@ int main(void)
     RUN(test_empty_system_starts_clean);
     RUN(test_empty_bst_search_and_traversal);
     RUN(test_priority_queue_counts_are_consistent);
+    RUN(test_queue_rejects_invalid_inputs);
+    RUN(test_system_rejects_invalid_complaints);
     RUN(test_history_last_day_after_removal);
 
     RUN(test_save_and_load_round_trip);
