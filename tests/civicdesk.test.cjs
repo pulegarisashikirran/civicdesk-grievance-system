@@ -13,7 +13,7 @@ const source = html.slice(scriptStart + 8, scriptEnd).split("/* ---------- scree
 globalThis.CivicDeskTest = {
   StatusList, Complaint, LinkedQueue, PriorityQueues, UndoStack, BST,
   linearSearch, binarySearch, bubble, selection, insertion, merge, quick,
-  SORTS, sys, add
+  SORTS, sys, add, dashboardStats
 };
 `;
 const context = vm.createContext({});
@@ -22,6 +22,15 @@ const C = context.CivicDeskTest;
 
 const complaint = (id, priority = 2) =>
   new C.Complaint(id, "Citizen " + id, "Area " + (id % 3), "Roads", priority, 20000);
+
+test("dashboard metrics count waiting, active and resolved complaints", () => {
+  const items = [complaint(1), complaint(2), complaint(3), complaint(4)];
+  items[1].history.append(1, "Assigned", 20001);
+  items[2].history.append(2, "In progress", 20001);
+  items[3].history.append(3, "Resolved", 20002);
+  assert.deepEqual({ ...C.dashboardStats(items) }, { total: 4, waiting: 1, active: 2, resolved: 1, rate: 25 });
+  assert.deepEqual({ ...C.dashboardStats([]) }, { total: 0, waiting: 0, active: 0, resolved: 0, rate: 0 });
+});
 
 test("status history appends and removes the latest status", () => {
   const h = new C.StatusList();
