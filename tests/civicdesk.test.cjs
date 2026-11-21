@@ -13,7 +13,7 @@ const source = html.slice(scriptStart + 8, scriptEnd).split("/* ---------- scree
 globalThis.CivicDeskTest = {
   StatusList, Complaint, LinkedQueue, PriorityQueues, UndoStack, BST,
   linearSearch, binarySearch, bubble, selection, insertion, merge, quick,
-  SORTS, sys, add, dashboardStats, validateComplaintFields, MAX_COMPLAINTS, MAX_IMPORT_BYTES
+  SORTS, sys, add, dashboardStats, validateComplaintFields, isActivationKey, MAX_COMPLAINTS, MAX_IMPORT_BYTES
 };
 `;
 const context = vm.createContext({});
@@ -32,6 +32,21 @@ test("complaint form validation rejects unsafe or invalid fields", () => {
   assert.match(C.validateComplaintFields("Alex", "Area", "Roads", 9), /valid priority/i);
   assert.equal(C.MAX_COMPLAINTS, 10000);
   assert.equal(C.MAX_IMPORT_BYTES, 5 * 1024 * 1024);
+});
+
+test("keyboard activation supports Enter and Space only", () => {
+  assert.equal(C.isActivationKey("Enter"), true);
+  assert.equal(C.isActivationKey(" "), true);
+  assert.equal(C.isActivationKey("Escape"), false);
+  assert.equal(C.isActivationKey("Tab"), false);
+});
+
+test("dashboard exposes skip navigation and keyboard-selectable complaint rows", () => {
+  assert.match(html, /class="skip-link" href="#main-content"/);
+  assert.match(html, /<main id="main-content">/);
+  assert.match(html, /role="button" aria-label="Select complaint/);
+  assert.match(html, /addEventListener\("keydown", e => \{ const tr = e.target.closest\("tr\[data-id\]"\)/);
+  assert.match(html, /aria-live="polite" aria-atomic="true"/);
 });
 
 test("dashboard metrics count waiting, active and resolved complaints", () => {
