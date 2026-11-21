@@ -1,6 +1,6 @@
 # CivicDesk — Public Grievance Redressal System (C)
 
-CivicDesk is a menu-driven complaint-management application and data-structures project written in **C**. Citizens' complaints are registered, prioritised through three linked-list queues, tracked through a per-complaint status history, indexed in a binary search tree, and reported with classical searching and sorting algorithms. Manual complaint status updates can be reversed using a linked-list-based undo stack. All names, areas and complaints in the sample data are fictional, and nothing is sent to any real government system.
+CivicDesk is a menu-driven complaint-management application and data-structures project written in **C**. Citizens' complaints are registered, prioritised through three linked-list queues, tracked through a per-complaint status history, indexed in a self-balancing AVL tree, and reported with classical searching and sorting algorithms. Manual complaint status updates can be reversed using a linked-list-based undo stack. All names, areas and complaints in the sample data are fictional, and nothing is sent to any real government system.
 
 Repository: https://github.com/pulegarisashikirran/civicdesk-grievance-system
 
@@ -15,14 +15,14 @@ The live demo is a JavaScript version of the same logic, made for easy demonstra
 * Three FIFO queues (one per priority) with a "process next complaint" action that always serves the highest non-empty priority.
 * A singly linked list per complaint that records the full status trail: Filed → Assigned → In Progress → Resolved, with dates and remarks.
 * Undo of the last status update using a linked-list stack.
-* A binary search tree keyed by complaint ID for lookup and sorted listing (in-order traversal).
-* Search by complaint ID (BST search and binary search), and by citizen name or area (linear search, case-insensitive).
+* A self-balancing AVL tree keyed by complaint ID for guaranteed logarithmic lookup and sorted listing (in-order traversal).
+* Search by complaint ID (AVL search and binary search), and by citizen name or area (linear search, case-insensitive).
 * Reports sorted by pending days, area, complaint ID or priority using five implemented algorithms: bubble, selection, insertion, merge and quick sort, all working on the same comparator-based interface.
 * A benchmark that times all five sorts and all three search methods on the same random data.
 * Pending-day calculation that stops counting once a complaint is resolved.
 * 12 pre-loaded sample complaints (some already in progress or resolved) so every feature can be demonstrated immediately.
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
-* 29 automated unit tests covering the data structures, algorithms, saving and loading, and system rules.
+* 31 automated unit tests covering the data structures, algorithms, saving and loading, and system rules.
 * Complete memory clean-up on exit: every node and complaint is freed (checked with AddressSanitizer).
 
 ## Data Structures & Algorithms — Topics Used, Locations & Logic
@@ -39,7 +39,7 @@ CivicDesk is architected around six foundational data structures and classical a
 | Queue (Linked List) | `queues.c` | `QueueNode`, `LinkedQueue` | Strict first-in, first-out waiting line for complaints | O(1) Enqueue/Dequeue / O(n) Space |
 | Priority handling (3 queues) | `queues.c` | `PriorityQueueManager` | Serves Urgent before High before Normal, FIFO inside each level | O(1) per operation (3 fixed queues) |
 | Stack (Linked List) | `undo_stack.c` | `StackNode`, `UndoStack` | Remembers status updates so the latest one is undone first | O(1) Push/Pop/Peek / O(n) Space |
-| Binary Search Tree (BST) | `bst.c` | `BSTNode`, `ComplaintBST` | Indexes every complaint by ID; in-order traversal gives sorted output | O(log n) Avg / O(n) Worst Search & Insert / O(n) Space |
+| AVL Tree | `bst.c` | `BSTNode`, `ComplaintBST` | Self-balancing ID index; in-order traversal gives sorted output | O(log n) Worst Search & Insert / O(n) Space |
 | Bubble Sort | `search_sort.c` | `bubble_sort()` | Sorts reports using adjacent swaps with early termination | O(n²) Worst/Avg, O(n) Best / O(1) Space |
 | Selection Sort | `search_sort.c` | `selection_sort()` | Sorts reports by selecting successive minimum values in place | O(n²) Comparisons, O(n) Swaps / O(1) Space |
 | Insertion Sort | `search_sort.c` | `insertion_sort()` | Sorts reports by inserting each item into a sorted prefix | O(n²) Worst, O(n) Best / O(1) Space |
@@ -113,17 +113,17 @@ CivicDesk is architected around six foundational data structures and classical a
   * "Undo" pops the most recent record, finds the complaint through the BST, and calls `history_remove_last()` on its status list. Last in, first out means the latest change is always the first one reversed.
   * `undo_peek()` and `undo_is_empty()` are also O(1).
 
-#### 7. Binary Search Tree (BST)
+#### 7. AVL Tree (self-balancing binary search tree)
 
 * **Where Used:**
   * `bst.c` (`BSTNode`, `ComplaintBST`)
   * One tree holds every complaint; `main.c` uses it for ID search, status updates, undo and history.
 * **Logic:**
   * Each node points to one complaint. IDs smaller than the node go to the left subtree, larger IDs to the right.
-  * `bst_insert()` walks down iteratively and rejects duplicate IDs. `bst_search()` follows a single root-to-node path.
+  * `bst_insert()` recursively inserts by ID, rejects duplicates, updates subtree heights and applies rotations when needed. `bst_search()` follows a single root-to-node path.
   * `bst_inorder()` visits left, node, right, which always yields complaints sorted by ID with no separate sorting step. This array also feeds binary search.
-  * Randomly generated complaint IDs help reduce the likelihood of highly unbalanced insertion patterns, although the BST does not guarantee balance. Inserting IDs in sorted order would turn it into a straight line and degrade operations to O(n); this behaviour is covered by a unit test. Self-balancing trees (AVL / Red-Black) are listed under future improvements.
-  * Average search and insert: O(log n); worst case O(n).
+  * AVL rotations maintain a height difference of at most one between each node's left and right subtrees. All four rotation cases (left-left, right-right, left-right and right-left) are handled. Sorted insertion is tested with 1,000 sequential IDs to verify that the tree remains logarithmic in height.
+  * Search and insert: O(log n) worst case. In-order traversal takes O(n).
 
 #### 8–12. Five Sorting Algorithms
 
@@ -149,7 +149,7 @@ Reports can be sorted by **pending days** (longest first), **area**, **complaint
 
 #### How the structures work together
 
-The BST is the master index of all complaints. The three queues hold only the complaints still waiting to be processed. Each complaint carries its own status linked list, and the undo stack remembers recent status updates so they can be reversed. A plain array of all complaints supports linear search and the sorting reports. The binary search runs over the BST's in-order array. `grievance_system.c` owns all of these and frees them together on exit.
+The BST is the master index of all complaints. The three queues hold only the complaints still waiting to be processed. Each complaint carries its own status linked list, and the undo stack remembers recent status updates so they can be reversed. A plain array of all complaints supports linear search and the sorting reports. The binary search runs over the AVL tree's in-order array. `grievance_system.c` owns all of these and frees them together on exit.
 
 ## How a Complaint Flows Through the System
 
@@ -179,7 +179,7 @@ CivicDesk tracks how long every complaint has been open. Dates are stored as day
 
 | Option | Purpose |
 |---|---|
-| `1` File a new complaint | Register a complaint, generate its ID, add it to the BST and the right queue |
+| `1` File a new complaint | Register a complaint, generate its ID, add it to the AVL tree and the right queue |
 | `2` Process next complaint | Dequeue the highest-priority complaint and mark it "Assigned" |
 | `3` Update complaint status | Move a processed complaint to In Progress or Resolved, with optional remarks |
 | `4` Undo last status update | Pop the stack and remove the latest status |
@@ -199,7 +199,7 @@ CivicDesk tracks how long every complaint has been open. Dates are stored as day
 |---|---|---|---|---|
 | Linear Search | O(1) | O(n) | O(n) | O(1) |
 | Binary Search (iterative) | O(1) | O(log n) | O(log n) | O(1) |
-| BST Search | O(1) | O(log n) | O(n) | O(1) |
+| AVL Tree Search | O(1) | O(log n) | O(log n) | O(1) |
 
 ### Sorting Algorithms
 
@@ -404,7 +404,7 @@ bst.h/.c              Binary Search Tree of complaints keyed by ID
 search_sort.h/.c      linear_search, binary_search, five sorts, comparators, benchmarks
 sample_data.h/.c      12 sample complaints and a random complaint generator for benchmarks
 util.h/.c             Safe allocation, string helpers, date conversion
-test_civicdesk.c      29 automated tests for the structures, algorithms, data files and system rules
+test_civicdesk.c      31 automated tests for the structures, algorithms, data files and system rules
 Makefile              Builds civicdesk and test_civicdesk
 index.html            Web demo (JavaScript version of the same logic, hosted on GitHub Pages)
 README.md             This document
@@ -414,7 +414,7 @@ LICENSE               MIT License
 ## Important limits / future improvement
 
 * Data lives in memory and is lost when the program closes unless it is saved with option 9. Several users or programs cannot share the data; that would need a server and a database.
-* The BST is not self-balancing. An AVL or Red-Black tree would guarantee O(log n) even for sorted IDs.
+* The AVL tree self-balances after insertion, guaranteeing O(log n) search and insertion even for sorted IDs. Deletion and more extensive randomized stress tests are potential future improvements.
 * Priority has only three fixed levels. A heap-based priority queue would allow finer ranking, for example by pending days within a priority.
 * Undo covers status updates only; filing and processing a complaint cannot be undone.
 * Text fields have fixed maximum lengths (names and areas up to 31 characters, department up to 23, remarks up to 63). Console input longer than its buffer is rejected rather than silently accepted.
@@ -424,11 +424,11 @@ LICENSE               MIT License
 
 The requested direction is a complaint-management project built only on the topics covered in the Data Structures course: searching, sorting, linked lists, stack, queue and BST, at a moderate difficulty level. The system is a classroom demonstration and not a replacement for a real government grievance portal.
 
-**Implemented in this version:** complaint registration; three-level priority queues; status history with linked lists; undo with a stack; BST index; BST, binary and linear search; five sorting algorithms with timing; benchmark; sample data; saving and loading of data files; automated tests; full memory clean-up.
+**Implemented in this version:** complaint registration; three-level priority queues; status history with linked lists; undo with a stack; AVL tree index; AVL, binary and linear search; five sorting algorithms with timing; benchmark; sample data; saving and loading of data files; automated tests; full memory clean-up.
 
-**Automated test coverage:** The 29-test suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, that quick sort handles sorted and reversed input, that merge sort is stable, that BST search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data.
+**Automated test coverage:** The 31-test suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, that quick sort handles sorted and reversed input, that merge sort is stable, that AVL search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data.
 
-**Still pending / sensible next steps:** sharing data between programs through a server and a database, a self-balancing tree, a graphical or web interface, and more tests for the menu input handling.
+**Still pending / sensible next steps:** sharing data between programs through a server and a database, deletion support and further AVL stress tests, a graphical or web interface, and more tests for the menu input handling.
 
 ## Project purpose
 
