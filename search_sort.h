@@ -50,6 +50,7 @@ extern const SortFn SORT_FUNCTIONS[SORT_ALGORITHM_COUNT];
 Complaint **copy_array(Complaint **items, int n);               /* caller free()s */
 
 /* ------------------------------------------------------------- benchmarks */
+#define BENCHMARK_RUNS 3 /* number of measurements used for each reported median */
 typedef struct {
     int n;
     double ms[SORT_ALGORITHM_COUNT];
