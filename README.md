@@ -22,7 +22,7 @@ The live demo is a JavaScript version of the same logic, made for easy demonstra
 * Pending-day calculation that stops counting once a complaint is resolved.
 * 12 pre-loaded sample complaints (some already in progress or resolved) so every feature can be demonstrated immediately.
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
-* 34 automated C tests and 19 JavaScript tests covering the data structures, algorithms, saving and loading, and system rules.
+* 34 automated C tests and 19 JavaScript unit tests covering the data structures, algorithms, saving and loading, and system rules.\n* Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, and CivicDesk file import/export.
 * Complete memory clean-up on exit: every node and complaint is freed; GitHub Actions runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Data Structures & Algorithms — Topics Used, Locations & Logic
@@ -436,3 +436,18 @@ Educational demonstration of queues, singly linked lists, stacks, binary search 
 
 This project is licensed under the [MIT License](LICENSE).
 
+
+## Browser end-to-end tests
+
+The browser suite uses Playwright and Chromium to test the actual dashboard in a local test server.
+
+Run it locally after installing Playwright:
+
+```powershell
+npm init -y
+npm install --no-save @playwright/test
+npx playwright install chromium
+npx playwright test
+```
+
+The suite checks the main citizen/officer workflow, dashboard metric updates, persistence after refresh, and importing/exporting the shared `CIVICDESK 1` data format. GitHub Actions runs these browser tests separately from the C and JavaScript unit-test jobs.
