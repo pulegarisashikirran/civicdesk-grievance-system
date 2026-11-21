@@ -11,3 +11,10 @@
 
 # Editor settings
 .vscode/
+
+# Local Node.js / Playwright tooling
+node_modules/
+package.json
+package-lock.json
+playwright-report/
+test-results/
