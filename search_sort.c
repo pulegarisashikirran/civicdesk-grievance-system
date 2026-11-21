@@ -227,8 +227,6 @@ Complaint **copy_array(Complaint **items, int n)
 }
 
 /* ------------------------------------------------------------- benchmarks */
-#define BENCHMARK_RUNS 3
-
 static double elapsed_ms(clock_t start)
 {
     return (double)(clock() - start) * 1000.0 / CLOCKS_PER_SEC;
