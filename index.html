@@ -63,6 +63,7 @@ td:first-child{font-weight:700;font-variant-numeric:tabular-nums}
 .note{color:var(--muted);font-size:.88rem;margin:10px 0 0;min-height:1.3em}
 ol.h{margin:0;padding-left:20px}ol.h li{margin:6px 0}
 .map{margin:0;padding-left:18px;font-size:.9rem;color:var(--muted)}.map li{margin:5px 0}.map b{color:var(--ink)}
+.skip-link{position:absolute;left:12px;top:-60px;z-index:20;background:var(--gold);color:var(--navy);padding:10px 14px;border-radius:8px;font-weight:700;text-decoration:none}.skip-link:focus{top:10px}
 #msg{position:fixed;left:50%;bottom:22px;transform:translate(-50%,calc(100% + 30px));visibility:hidden;opacity:0;background:var(--navy);color:#fff;padding:13px 22px;border-radius:12px;box-shadow:0 18px 40px -10px rgba(0,0,0,.5);max-width:92vw;text-align:center;font-weight:600;transition:transform .25s,opacity .25s,visibility .25s;z-index:9}
 #msg.on{transform:translate(-50%,0);visibility:visible;opacity:1}
 footer{background:var(--navy);color:#8fa1c4;padding:26px 0;font-size:.88rem}
@@ -79,7 +80,8 @@ body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
 </style>
 </head>
 <body>
-<nav class="nav"><div class="in"><a class="brand" href="#top"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#c9a24b"/><path d="M7 13.5l4 4 8-9" fill="none" stroke="#0b1b3a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>CivicDesk</a>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<nav class="nav" aria-label="Primary navigation"><div class="in"><a class="brand" href="#top"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#c9a24b"/><path d="M7 13.5l4 4 8-9" fill="none" stroke="#0b1b3a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>CivicDesk</a>
 <div class="links"><a href="#desk">File a complaint</a><a href="#list">Complaints</a><a href="#hist-card">Track</a><a class="devonly" href="#bench-card">Benchmark</a></div>
 <label class="sw"><input type="checkbox" id="dev" aria-label="Show data structure details"><span>Under the hood</span></label></div></nav>
 
@@ -91,7 +93,7 @@ body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
 <p class="meta" id="meta"></p>
 </div></header>
 
-<main>
+<main id="main-content">
 <div class="rail" id="desk">
   <section class="card">
     <h2>File a complaint</h2><p class="sub">It joins the waiting line for its priority.</p>
@@ -177,7 +179,7 @@ body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
 </main>
 
 <footer><div class="in">This page is a JavaScript version of the CivicDesk C project. Data is saved in this browser on this device. Use Export to move it elsewhere.</div></footer>
-<div id="msg" role="status"></div>
+<div id="msg" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 "use strict";
@@ -376,6 +378,8 @@ for (const [id, nm, ar, dp, pr, ago, steps] of SAMPLE) {
   add(c);
 }
 
+function isActivationKey(key) { return key === "Enter" || key === " "; }
+
 function dashboardStats(items) {
   const stats = { total: items.length, waiting: 0, active: 0, resolved: 0, rate: 0 };
   for (const c of items) {
@@ -408,7 +412,7 @@ function render() {
   $("statProgressFill").style.width = `${stats.rate}%`;
   $("statProgress").setAttribute("aria-valuenow", String(stats.rate));
   const list = view.list || sys.all;
-  $("rows").innerHTML = list.length ? list.map(c => `<tr data-id="${c.id}"><td>${c.id}</td><td>${esc(c.name)}</td><td>${esc(c.area)}</td><td>${esc(c.dept)}</td>
+  $("rows").innerHTML = list.length ? list.map(c => `<tr data-id="${c.id}" tabindex="0" role="button" aria-label="Select complaint ${c.id}, ${esc(c.name)}, status ${ST[c.status]}"><td>${c.id}</td><td>${esc(c.name)}</td><td>${esc(c.area)}</td><td>${esc(c.dept)}</td>
     <td><span class="pill p${c.pri}">${PRI[c.pri]}</span></td><td><span class="pill s${c.status}">${ST[c.status]}</span></td><td>${c.pending()} days</td></tr>`).join("")
     : `<tr><td colspan="7">No complaints found.</td></tr>`;
   $("note").textContent = view.note || `${list.length} complaints, in the order they were filed.`;
@@ -574,6 +578,7 @@ function importData(file) {
     return toast("Could not import: file is too large (maximum 5 MB).");
   file.text().then(text => {
     const list = parseData(text);                       // throws before anything is changed
+    if (sys.all.length && !confirm(`Import ${list.length} complaints and replace the ${sys.all.length} currently stored?`)) return toast("Import cancelled. Existing complaints were kept.");
     Object.assign(sys, { bst: new BST(), pq: new PriorityQueues(), undo: new UndoStack(), all: [] });
     list.forEach(add);
     $("hist").innerHTML = ""; show(null, ""); toast(`Imported ${list.length} complaints from ${file.name}.`);
@@ -611,6 +616,7 @@ $("dev").onchange = () => {
 $("bSort").onclick = sortReport; $("bAll").onclick = () => show(null, ""); $("bBench").onclick = benchmark;
 $("q").addEventListener("keydown", e => { if (e.key === "Enter") search(); });
 $("rows").addEventListener("click", e => { const tr = e.target.closest("tr[data-id]"); if (tr) $("cid").value = $("tid").value = tr.dataset.id; });
+$("rows").addEventListener("keydown", e => { const tr = e.target.closest("tr[data-id]"); if (tr && isActivationKey(e.key)) { e.preventDefault(); $("cid").value = $("tid").value = tr.dataset.id; toast(`Complaint ${tr.dataset.id} selected.`); } });
 $("bExport").onclick = exportData;
 $("bImport").onclick = () => $("fileIn").click();
 $("fileIn").onchange = e => { const f = e.target.files[0]; if (f) importData(f); e.target.value = ""; };
