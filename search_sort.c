@@ -227,9 +227,27 @@ Complaint **copy_array(Complaint **items, int n)
 }
 
 /* ------------------------------------------------------------- benchmarks */
+#define BENCHMARK_RUNS 3
+
 static double elapsed_ms(clock_t start)
 {
     return (double)(clock() - start) * 1000.0 / CLOCKS_PER_SEC;
+}
+
+/* Return the middle measurement so one unusually fast or slow run has less influence. */
+static double median_ms(double *samples, int count)
+{
+    int i, j;
+    for (i = 1; i < count; i++) {
+        double value = samples[i];
+        j = i - 1;
+        while (j >= 0 && samples[j] > value) {
+            samples[j + 1] = samples[j];
+            j--;
+        }
+        samples[j + 1] = value;
+    }
+    return samples[count / 2];
 }
 
 void benchmark_sorting(const int *sizes, int count, SortBenchRow *rows)
@@ -250,11 +268,16 @@ void benchmark_sorting(const int *sizes, int count, SortBenchRow *rows)
         }
         data = generate_random_complaints(n, 42);
         for (a = 0; a < SORT_ALGORITHM_COUNT; a++) {
-            Complaint **work = copy_array(data, n);       /* every algorithm gets the same input */
-            clock_t start = clock();
-            SORT_FUNCTIONS[a](work, n, cmp_pending_asc);
-            rows[s].ms[a] = elapsed_ms(start);
-            free(work);
+            double samples[BENCHMARK_RUNS];
+            int run;
+            for (run = 0; run < BENCHMARK_RUNS; run++) {
+                Complaint **work = copy_array(data, n); /* copy cost is excluded from timing */
+                clock_t start = clock();
+                SORT_FUNCTIONS[a](work, n, cmp_pending_asc);
+                samples[run] = elapsed_ms(start);
+                free(work);
+            }
+            rows[s].ms[a] = median_ms(samples, BENCHMARK_RUNS);
         }
         free_complaints(data, n);
     }
@@ -267,6 +290,12 @@ SearchBenchResult benchmark_searching(int n, int lookups)
     Complaint **by_id;
     Complaint **out;
     int *targets;
+    double linear_samples[BENCHMARK_RUNS];
+    double binary_samples[BENCHMARK_RUNS];
+    double tree_samples[BENCHMARK_RUNS];
+    ComplaintBST tree;
+    int i, run;
+
     if (n <= 0 || n > 90000 || lookups <= 0) {
         r.n = n;
         r.lookups = lookups;
@@ -278,35 +307,37 @@ SearchBenchResult benchmark_searching(int n, int lookups)
     by_id = copy_array(data, n);
     out = xmalloc((size_t)n * sizeof(Complaint *));
     targets = xmalloc((size_t)lookups * sizeof(int));
-    ComplaintBST tree;
-    clock_t start;
-    int i;
 
     merge_sort(by_id, n, cmp_id);                         /* input for binary search */
     bst_init(&tree);
-    for (i = 0; i < n; i++)                               /* random order -> reasonably balanced */
-        bst_insert(&tree, data[i]);
+    for (i = 0; i < n; i++)
+        bst_insert(&tree, data[i]);                       /* AVL tree; input order is deterministic */
     for (i = 0; i < lookups; i++)
         targets[i] = data[(i * 37) % n]->cid;             /* existing IDs spread over the data */
 
-    start = clock();
-    for (i = 0; i < lookups; i++)
-        linear_search(data, n, match_id, &targets[i], out);
-    r.linear_ms = elapsed_ms(start);
+    for (run = 0; run < BENCHMARK_RUNS; run++) {
+        clock_t start = clock();
+        for (i = 0; i < lookups; i++)
+            linear_search(data, n, match_id, &targets[i], out);
+        linear_samples[run] = elapsed_ms(start);
 
-    start = clock();
-    for (i = 0; i < lookups; i++)
-        binary_search(by_id, n, targets[i]);
-    r.binary_ms = elapsed_ms(start);
+        start = clock();
+        for (i = 0; i < lookups; i++)
+            binary_search(by_id, n, targets[i]);
+        binary_samples[run] = elapsed_ms(start);
 
-    start = clock();
-    for (i = 0; i < lookups; i++)
-        bst_search(&tree, targets[i]);
-    r.bst_ms = elapsed_ms(start);
+        start = clock();
+        for (i = 0; i < lookups; i++)
+            bst_search(&tree, targets[i]);
+        tree_samples[run] = elapsed_ms(start);
+    }
 
     r.n = n;
     r.lookups = lookups;
     r.bst_height = bst_height(&tree);
+    r.linear_ms = median_ms(linear_samples, BENCHMARK_RUNS);
+    r.binary_ms = median_ms(binary_samples, BENCHMARK_RUNS);
+    r.bst_ms = median_ms(tree_samples, BENCHMARK_RUNS);
 
     bst_free(&tree);
     free(targets);
