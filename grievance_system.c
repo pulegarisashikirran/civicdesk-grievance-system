@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "grievance_system.h"
 #include "util.h"
 
@@ -92,30 +96,81 @@ static void clean_text(const char *src, char *dst, size_t size)
 
 int system_save(const GrievanceSystem *sys, const char *path)
 {
-    FILE *f = fopen(path, "w");
+    FILE *f;
     char name[NAME_LEN], area[AREA_LEN], dept[DEPT_LEN], remarks[REMARK_LEN];
+    char *temp_path;
+    size_t path_len;
     int i;
+    int failed = 0;
 
-    if (f == NULL)
+    if (sys == NULL || path == NULL || path[0] == '\0')
         return -1;
-    fprintf(f, "%s\n", DATA_HEADER);
-    for (i = 0; i < sys->count; i++) {
+
+    path_len = strlen(path);
+    temp_path = malloc(path_len + 5); /* space for ".tmp" and the null terminator */
+    if (temp_path == NULL)
+        return -1;
+
+    strcpy(temp_path, path);
+    strcat(temp_path, ".tmp");
+
+    f = fopen(temp_path, "w");
+    if (f == NULL) {
+        free(temp_path);
+        return -1;
+    }
+
+    if (fprintf(f, "%s\n", DATA_HEADER) < 0)
+        failed = 1;
+
+    for (i = 0; !failed && i < sys->count; i++) {
         const Complaint *c = sys->all[i];
         const StatusNode *node;
+
         clean_text(c->name, name, sizeof name);
         clean_text(c->area, area, sizeof area);
         clean_text(c->department, dept, sizeof dept);
-        fprintf(f, "C|%d|%s|%s|%s|%d|%ld\n", c->cid, name, area, dept, (int)c->priority, c->filed_on);
+
+        if (fprintf(f, "C|%d|%s|%s|%s|%d|%ld\n",
+                    c->cid, name, area, dept,
+                    (int)c->priority, c->filed_on) < 0) {
+            failed = 1;
+            break;
+        }
+
         for (node = c->history.head->next; node != NULL; node = node->next) {
             clean_text(node->remarks, remarks, sizeof remarks);
-            fprintf(f, "S|%d|%ld|%s\n", (int)node->status, node->day, remarks);
+
+            if (fprintf(f, "S|%d|%ld|%s\n",
+                        (int)node->status, node->day, remarks) < 0) {
+                failed = 1;
+                break;
+            }
         }
     }
-    if (ferror(f)) {
-        fclose(f);
-        return -1;
+
+    if (ferror(f))
+        failed = 1;
+
+    if (fclose(f) != 0)
+        failed = 1;
+
+    if (!failed) {
+#ifdef _WIN32
+        if (!MoveFileExA(temp_path, path,
+                         MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+            failed = 1;
+#else
+        if (rename(temp_path, path) != 0)
+            failed = 1;
+#endif
     }
-    return fclose(f) == 0 ? 0 : -1;
+
+    if (failed)
+        remove(temp_path);
+
+    free(temp_path);
+    return failed ? -1 : 0;
 }
 
 /* Splits line in place at every | and stores up to max field pointers. Returns the count, or -1. */
