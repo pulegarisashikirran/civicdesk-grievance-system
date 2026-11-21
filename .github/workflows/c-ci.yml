@@ -1,0 +1,30 @@
+name: CivicDesk C CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: Build and test (C99)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up GCC
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes build-essential
+
+      - name: Build test suite
+        run: |
+          gcc -std=c99 -Wall -Wextra -pedantic -O2 -o test_civicdesk test_civicdesk.c util.c status_list.c complaint.c bst.c queues.c undo_stack.c search_sort.c sample_data.c grievance_system.c
+
+      - name: Run tests
+        run: ./test_civicdesk
+
+      - name: Build CivicDesk application
+        run: |
+          gcc -std=c99 -Wall -Wextra -pedantic -O2 -o civicdesk main.c util.c status_list.c complaint.c bst.c queues.c undo_stack.c search_sort.c sample_data.c grievance_system.c
