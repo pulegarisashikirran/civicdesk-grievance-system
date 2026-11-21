@@ -1,5 +1,5 @@
-/* bst.h - Binary Search Tree of complaints, ordered by complaint ID.
- * Average insert/search O(log n). Worst case (IDs inserted in sorted order) O(n). */
+/* bst.h - AVL (self-balancing binary search tree) of complaints, ordered by ID.
+ * Search and insertion remain O(log n), including sorted insertion orders. */
 #ifndef BST_H
 #define BST_H
 
@@ -9,6 +9,7 @@ typedef struct BSTNode {
     Complaint *complaint;
     struct BSTNode *left;
     struct BSTNode *right;
+    int height;                 /* cached subtree height; leaf nodes have height 1 */
 } BSTNode;
 
 typedef struct {
@@ -17,10 +18,10 @@ typedef struct {
 } ComplaintBST;
 
 void        bst_init(ComplaintBST *tree);
-int         bst_insert(ComplaintBST *tree, Complaint *c);       /* 0 if the ID already exists */
+int         bst_insert(ComplaintBST *tree, Complaint *c);       /* 0 for invalid input or duplicate ID */
 Complaint  *bst_search(const ComplaintBST *tree, int cid);      /* NULL if not found          */
 Complaint **bst_inorder(const ComplaintBST *tree, int *count);  /* sorted by ID; caller free()s the array */
-int         bst_height(const ComplaintBST *tree);
+int         bst_height(const ComplaintBST *tree);               /* AVL height, empty tree = 0 */
 void        bst_free(ComplaintBST *tree);                       /* frees nodes, not complaints */
 
 #endif
