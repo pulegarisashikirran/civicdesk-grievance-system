@@ -37,6 +37,7 @@ h1{font:700 clamp(2.1rem,5vw,3.5rem)/1.06 Fraunces,Georgia,serif;letter-spacing:
 main{max-width:1180px;margin:auto;padding:30px 22px 90px;display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
 .rail{display:grid;gap:22px;position:sticky;top:78px}.col{display:grid;gap:22px;min-width:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow)}
+.stats{display:grid;gap:12px;margin-bottom:22px}.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}.stat-label{color:var(--muted);font-size:.78rem;font-weight:700}.stat-value{font:700 1.9rem/1.2 Fraunces,Georgia,serif;margin-top:6px;font-variant-numeric:tabular-nums}.stat-foot{color:var(--muted);font-size:.78rem;margin-top:4px}.progress-track{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:10px}.progress-fill{height:100%;width:0;background:var(--brand);border-radius:99px;transition:width .25s}
 h2{font:700 1.25rem/1.2 Fraunces,Georgia,serif;margin:0 0 4px}.sub{color:var(--muted);margin:0 0 14px;font-size:.9rem}
 label{display:block;font-size:.82rem;font-weight:600;color:var(--muted);margin:12px 0 4px}
 input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit}
@@ -65,8 +66,8 @@ ol.h{margin:0;padding-left:20px}ol.h li{margin:6px 0}
 #msg{position:fixed;left:50%;bottom:22px;transform:translate(-50%,160%);background:var(--navy);color:#fff;padding:13px 22px;border-radius:12px;box-shadow:0 18px 40px -10px rgba(0,0,0,.5);max-width:92vw;text-align:center;font-weight:600;transition:transform .25s;z-index:9}
 #msg.on{transform:translate(-50%,0)}
 footer{background:var(--navy);color:#8fa1c4;padding:26px 0;font-size:.88rem}
-@media(max-width:920px){main{grid-template-columns:1fr}.rail{position:static}.bar,.bar.s{grid-template-columns:1fr}}
-@media(max-width:700px){.lanes{grid-template-columns:1fr}.links{display:none}.hero{padding:44px 0 38px}}
+@media(max-width:920px){main{grid-template-columns:1fr}.rail{position:static}.bar,.bar.s{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.lanes{grid-template-columns:1fr}.links{display:none}.hero{padding:44px 0 38px}.stat{padding:13px}.stat-value{font-size:1.6rem}}
 @media(prefers-reduced-motion:reduce){.lane{animation:none}#msg,html{transition:none;scroll-behavior:auto}}
 body:not(.dev) .devonly{display:none!important}
 body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
@@ -131,6 +132,14 @@ body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
 </div>
 
 <div class="col">
+  <section class="stats" aria-label="Complaint overview">
+    <div class="stats-grid">
+      <article class="stat"><div class="stat-label">TOTAL COMPLAINTS</div><div class="stat-value" id="statTotal">0</div><div class="stat-foot">All registered complaints</div></article>
+      <article class="stat"><div class="stat-label">WAITING</div><div class="stat-value" id="statWaiting">0</div><div class="stat-foot">Awaiting officer assignment</div></article>
+      <article class="stat"><div class="stat-label">ACTIVE</div><div class="stat-value" id="statActive">0</div><div class="stat-foot">Assigned or in progress</div></article>
+      <article class="stat"><div class="stat-label">RESOLVED</div><div class="stat-value" id="statResolved">0</div><div class="stat-foot"><span id="statRate">0%</span> resolution rate<div class="progress-track" role="progressbar" aria-label="Resolution rate" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="statProgress"><div class="progress-fill" id="statProgressFill"></div></div></div></article>
+    </div>
+  </section>
   <section class="card" id="list">
     <h2>Complaints</h2><p class="sub">Click any row to select it for an update.</p>
     <div class="bar s">
@@ -355,6 +364,17 @@ for (const [id, nm, ar, dp, pr, ago, steps] of SAMPLE) {
   add(c);
 }
 
+function dashboardStats(items) {
+  const stats = { total: items.length, waiting: 0, active: 0, resolved: 0, rate: 0 };
+  for (const c of items) {
+    if (c.status === 0) stats.waiting++;
+    else if (c.status === 1 || c.status === 2) stats.active++;
+    else if (c.status === 3) stats.resolved++;
+  }
+  stats.rate = stats.total ? Math.round(stats.resolved * 100 / stats.total) : 0;
+  return stats;
+}
+
 /* ---------- screen ---------- */
 let view = { list: null, note: "" }, toastTimer;
 function toast(t) { const m = $("msg"); m.textContent = t; m.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => m.classList.remove("on"), 3500); }
@@ -367,6 +387,14 @@ function render() {
     return `<div class="lane l${i}"><div class="lh"><b>${q.size}</b><span>${p}</span></div><div class="chips">${chips || '<span class="more">Nobody waiting</span>'}</div></div>`;
   }).join("");
   $("meta").textContent = `${sys.all.length} complaints on file, ${sys.all.filter(c => c.status === 3).length} resolved. The gold ID in each lane is next in line.`;
+  const stats = dashboardStats(sys.all);
+  $("statTotal").textContent = stats.total;
+  $("statWaiting").textContent = stats.waiting;
+  $("statActive").textContent = stats.active;
+  $("statResolved").textContent = stats.resolved;
+  $("statRate").textContent = `${stats.rate}%`;
+  $("statProgressFill").style.width = `${stats.rate}%`;
+  $("statProgress").setAttribute("aria-valuenow", String(stats.rate));
   const list = view.list || sys.all;
   $("rows").innerHTML = list.length ? list.map(c => `<tr data-id="${c.id}"><td>${c.id}</td><td>${esc(c.name)}</td><td>${esc(c.area)}</td><td>${esc(c.dept)}</td>
     <td><span class="pill p${c.pri}">${PRI[c.pri]}</span></td><td><span class="pill s${c.status}">${ST[c.status]}</span></td><td>${c.pending()} days</td></tr>`).join("")
