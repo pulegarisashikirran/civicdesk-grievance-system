@@ -650,6 +650,33 @@ static int test_load_rejects_future_dates(void)
     return failed_here;
 }
 
+static int test_load_rejects_null_arguments(void)
+{
+    GrievanceSystem sys;
+    int failed_here = 0;
+    char error[100];
+
+    load_into(&sys);
+
+    CHECK(system_load(NULL, TEST_FILE, error, sizeof error) == -1);
+    CHECK(error[0] != '\0');
+
+    error[0] = '\0';
+    CHECK(system_load(&sys, NULL, error, sizeof error) == -1);
+    CHECK(error[0] != '\0');
+
+    error[0] = '\0';
+    CHECK(system_load(&sys, "", error, sizeof error) == -1);
+    CHECK(error[0] != '\0');
+
+    CHECK(system_load(&sys, NULL, NULL, 0) == -1);
+    CHECK(sys.count == 12);
+    CHECK(bst_search(&sys.bst, 4821) != NULL);
+
+    system_free(&sys);
+    return failed_here;
+}
+
 static int test_load_missing_file_fails(void)
 {
     GrievanceSystem sys;
@@ -791,6 +818,7 @@ int main(void)
     RUN(test_save_and_load_round_trip);
     RUN(test_load_rejects_invalid_files_and_keeps_data);
     RUN(test_load_rejects_future_dates);
+    RUN(test_load_rejects_null_arguments);
     RUN(test_load_missing_file_fails);
     RUN(test_save_replaces_separator_characters);
 
