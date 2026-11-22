@@ -15,8 +15,8 @@ It is an educational project: the browser dashboard can use the local API when e
 - Built a C99 complaint-management application using linked-list priority queues, an AVL-tree ID index, status-history lists and a linked-list undo stack.
 - Implemented complaint processing, validation, save/load persistence, linear and binary search, and five sorting algorithms (bubble, selection, insertion, merge and quick sort).
 - Created a JavaScript dashboard with complaint filing, status updates, search/sort, summary metrics and import/export, supporting browser localStorage or optional REST API mode.
-- Added an optional Node.js REST API with validated complaint endpoints, sequential status transitions and transactional SQLite storage, relational complaint-history records and one-time migration from the previous JSON data file; the browser can connect to it while the C console remains independent.
-- Added 73 automated checks: 39 C tests, 19 browser JavaScript tests, 12 API tests and 3 Playwright end-to-end scenarios; configured GitHub Actions for build, tests, browser/API integration and sanitizer checks.
+- Added an optional Node.js REST API with validated complaint endpoints, sequential status transitions and transactional SQLite storage, versioned schema migrations, validated backup/restore and one-time migration from the previous JSON data file; the browser can connect to it while the C console remains independent.
+- Added 76 automated checks: 39 C tests, 19 browser JavaScript tests, 15 API tests and 3 Playwright end-to-end scenarios; configured GitHub Actions for build, tests, browser/API integration and sanitizer checks.
 
 **Tip:** Keep only the bullets that fit your resume and that you can confidently explain. Add the repository and live demo links beside the project title.
 
@@ -36,7 +36,7 @@ A C99 and JavaScript grievance-management demo with an optional Node.js REST API
 | Sorting | Bubble, selection, insertion, merge and quick sort | Compare time complexity and stability |
 | C persistence | CIVICDESK 1 text format | Validate input and avoid replacing a valid save with a partial write |
 | Browser persistence | localStorage | Data belongs to that browser and is separate from C save files |
-| REST API | Node.js built-in HTTP server and SQLite store | Exposes local complaint endpoints; records are separate from browser and C data |
+| REST API | Node.js built-in HTTP server and SQLite store | Exposes local complaint endpoints; versioned schema migrations and backup/recovery protect stored data |
 | Verification | C, Node test runner, Playwright and CI | Tests cover logic, API behavior, browser behavior and memory-safety checks |
 
 ## Complexity reference
