@@ -17,6 +17,8 @@ class StoreError extends Error {
 
 function validateNewComplaint(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return "Request body must be a JSON object.";
+  const unknownField = Object.keys(input).find(field => !["name", "area", "department", "priority"].includes(field));
+  if (unknownField) return "Unknown complaint field: " + unknownField + ".";
   for (const field of ["name", "area"]) {
     if (typeof input[field] !== "string" || !input[field].trim()) return field + " is required.";
     if (input[field].trim().length > 31) return field + " must be 31 characters or fewer.";
@@ -257,9 +259,11 @@ class ComplaintStore {
     if (!input || typeof input !== "object" || Array.isArray(input)) {
       throw new StoreError(400, "Request body must be a JSON object.");
     }
+    const unknownField = Object.keys(input).find(field => !["status", "remarks"].includes(field));
+    if (unknownField) throw new StoreError(400, "Unknown status field: " + unknownField + ".");
     if (input.remarks !== undefined &&
-        (typeof input.remarks !== "string" || input.remarks.length > 63)) {
-      throw new StoreError(400, "remarks must be a string of 63 characters or fewer.");
+        (typeof input.remarks !== "string" || input.remarks.length > 63 || /[\\u0000-\\u001f\\u007f]/.test(input.remarks))) {
+      throw new StoreError(400, "remarks must be 63 characters or fewer and contain no control characters.");
     }
     this.database.exec("BEGIN IMMEDIATE");
     try {
