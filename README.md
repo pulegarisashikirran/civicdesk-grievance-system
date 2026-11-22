@@ -16,7 +16,7 @@ CivicDesk models how public-service complaints can be registered, prioritised, t
 | Optional API backend | Node.js built-in HTTP server and JSON file storage |
 | Data structures | Linked lists, FIFO queues, stack and AVL tree |
 | Algorithms | Linear search, binary search and five sorting algorithms |
-| Automated verification | 69 tests: 39 C, 19 browser-core JavaScript, 9 API and 2 Playwright end-to-end tests |
+| Automated verification | 70 tests: 39 C, 19 browser-core JavaScript, 9 API and 3 Playwright end-to-end tests |
 | CI | GitHub Actions, including AddressSanitizer and UndefinedBehaviorSanitizer |
 | Project scope | Educational, single-user demonstration; not connected to a government system |
 
@@ -44,7 +44,7 @@ The C99 console application is the original data-structures implementation. The 
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
 * Optional REST API (`api/server.cjs`): health check, complaint creation/list/detail, sequential status updates, request validation and persistent JSON storage, using Node.js built-in modules only.
 * 39 automated C tests, 19 browser JavaScript tests and 9 REST API tests cover data structures, algorithms, API validation, persistence and system rules.
-* 2 Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, and CivicDesk file import/export.
+* 3 Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, CivicDesk file import/export, and dashboard-to-API persistence.
 * Complete memory clean-up on exit: every node and complaint is freed; GitHub Actions runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Data Structures & Algorithms — Topics Used, Locations & Logic
