@@ -345,6 +345,18 @@ test("API rejects cross-origin and DNS-rebinding-style host requests", async t =
   });
   assert.equal(crossOrigin.status, 403);
 
+  const safeNavigation = await fetch(base + "/", {
+    headers: { "sec-fetch-site": "cross-site" }
+  });
+  assert.equal(safeNavigation.status, 200);
+
+  const crossSiteMutation = await fetch(base + "/api/complaints", {
+    method: "POST",
+    headers: { "content-type": "application/json", "sec-fetch-site": "cross-site" },
+    body: JSON.stringify({ name: "Blocked", area: "Madhapur", department: "Roads", priority: "Urgent" })
+  });
+  assert.equal(crossSiteMutation.status, 403);
+
   const parsed = new URL(base);
   const hostileHost = await new Promise((resolve, reject) => {
     const request = http.request({
