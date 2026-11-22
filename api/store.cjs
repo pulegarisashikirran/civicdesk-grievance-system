@@ -262,7 +262,7 @@ class ComplaintStore {
     const unknownField = Object.keys(input).find(field => !["status", "remarks"].includes(field));
     if (unknownField) throw new StoreError(400, "Unknown status field: " + unknownField + ".");
     if (input.remarks !== undefined &&
-        (typeof input.remarks !== "string" || input.remarks.length > 63 || /[\\u0000-\\u001f\\u007f]/.test(input.remarks))) {
+        (typeof input.remarks !== "string" || input.remarks.length > 63 || /[\u0000-\u001f\u007f]/.test(input.remarks))) {
       throw new StoreError(400, "remarks must be 63 characters or fewer and contain no control characters.");
     }
     this.database.exec("BEGIN IMMEDIATE");
