@@ -260,7 +260,11 @@ async function start() {
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error("PORT must be an integer between 1 and 65535.");
   }
-  const server = await createApiServer();
+  const bootstrapAdmin = process.env.CIVICDESK_ADMIN_EMAIL && process.env.CIVICDESK_ADMIN_PASSWORD
+    ? { email: process.env.CIVICDESK_ADMIN_EMAIL, password: process.env.CIVICDESK_ADMIN_PASSWORD }
+    : null;
+  if (!bootstrapAdmin) throw new Error("Set CIVICDESK_ADMIN_EMAIL and CIVICDESK_ADMIN_PASSWORD before starting CivicDesk.");
+  const server = await createApiServer({ bootstrapAdmin });
   server.listen(port, "127.0.0.1", () => {
     process.stdout.write("CivicDesk API listening at http://127.0.0.1:" + port + "\n");
   });
