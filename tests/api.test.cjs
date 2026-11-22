@@ -479,11 +479,43 @@ test("admins create officers and officers can update complaint statuses", async 
   assert.equal(complaint.status, 201);
   const staff = await authRequest(base, "/api/users", { email: "officer@example.test", password: "OfficerPassword123", role: "officer" }, adminCookie);
   assert.equal(staff.status, 201);
+  const staffUser = (await staff.json()).user;
+  const assigned = await authRequest(base, "/api/complaints/1000/assignment", { officerId: staffUser.id }, adminCookie, "PATCH");
+  assert.equal(assigned.status, 200);
+  assert.equal((await assigned.json()).complaint.assignedTo, staffUser.id);
   const officer = await authRequest(base, "/api/auth/login", { email: "officer@example.test", password: "OfficerPassword123" });
-  const changed = await authRequest(base, "/api/complaints/1000/status", { status: "Assigned" }, sessionCookie(officer), "PATCH");
+  const officerCookie = sessionCookie(officer);
+  const officerList = await fetch(base + "/api/complaints", { headers: { cookie: officerCookie } });
+  assert.equal((await officerList.json()).count, 1);
+  const changed = await authRequest(base, "/api/complaints/1000/status", { status: "Assigned" }, officerCookie, "PATCH");
   assert.equal(changed.status, 200);
+  const secondStaff = await authRequest(base, "/api/users", { email: "other-officer@example.test", password: "OtherOfficer123", role: "officer" }, adminCookie);
+  const otherLogin = await authRequest(base, "/api/auth/login", { email: "other-officer@example.test", password: "OtherOfficer123" });
+  const otherCookie = sessionCookie(otherLogin);
+  assert.equal((await fetch(base + "/api/complaints/1000", { headers: { cookie: otherCookie } })).status, 404);
+  assert.equal((await authRequest(base, "/api/complaints/1000/status", { status: "In Progress" }, otherCookie, "PATCH")).status, 404);
   assert.equal((await fetch(base + "/api/users", { headers: { cookie: citizenCookie } })).status, 403);
 });
+
+test("only admins can assign complaints and assignment validates active officer accounts", async t => {
+  const base = await startAuthenticatedServer(t);
+  const admin = await authRequest(base, "/api/auth/login", { email: "admin@example.test", password: "AdminPassword123" });
+  const adminCookie = sessionCookie(admin);
+  const citizen = await authRequest(base, "/api/auth/register", { email: "assign-owner@example.test", password: "AssignOwner123" });
+  const citizenCookie = sessionCookie(citizen);
+  await authRequest(base, "/api/complaints", { name: "Assignment target", area: "Madhapur", department: "Roads", priority: "High" }, citizenCookie);
+  assert.equal((await authRequest(base, "/api/complaints/1000/assignment", { officerId: 2 }, citizenCookie, "PATCH")).status, 403);
+  assert.equal((await authRequest(base, "/api/complaints/1000/assignment", { officerId: 999 }, adminCookie, "PATCH")).status, 400);
+  assert.equal((await authRequest(base, "/api/complaints/9999/assignment", { officerId: null }, adminCookie, "PATCH")).status, 404);
+  const created = await authRequest(base, "/api/users", { email: "assigned-officer@example.test", password: "AssignedOfficer123", role: "officer" }, adminCookie);
+  const officerId = (await created.json()).user.id;
+  const result = await authRequest(base, "/api/complaints/1000/assignment", { officerId }, adminCookie, "PATCH");
+  assert.equal(result.status, 200);
+  const unassigned = await authRequest(base, "/api/complaints/1000/assignment", { officerId: null }, adminCookie, "PATCH");
+  assert.equal(unassigned.status, 200);
+  assert.equal((await unassigned.json()).complaint.assignedTo, null);
+});
+
 
 test("logout revokes sessions and admins can deactivate accounts", async t => {
   const base = await startAuthenticatedServer(t);
