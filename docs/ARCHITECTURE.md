@@ -1,9 +1,10 @@
 # CivicDesk Architecture
 
-CivicDesk has two demonstration interfaces backed by equivalent complaint-management concepts:
+CivicDesk has three independent parts that demonstrate related complaint-management workflows:
 
 - **C99 console application:** the primary implementation, with manually managed data structures and file persistence.
-- **Browser dashboard:** a JavaScript companion for interactive demonstrations. It stores browser data in `localStorage`; it does not connect to the C process or a remote service.
+- **Browser dashboard:** a JavaScript companion for interactive demonstrations. It stores browser data in `localStorage` and is not connected to either backend.
+- **Optional Node.js REST API:** a local HTTP service with JSON-file persistence. It exposes endpoints for complaint creation, listing, lookup and sequential status updates; it is not connected to the browser dashboard or C process.
 
 This is an educational, single-user demonstration. It is not connected to a government service and should not be used with real personal data.
 
@@ -44,6 +45,7 @@ flowchart TB
     TESTS["Automated verification\nC tests · JavaScript tests · Playwright E2E"]
     TESTS -. verifies .-> SYS
     TESTS -. verifies .-> PAGE
+    TESTS -. verifies .-> ROUTES
 ```
 
 ## C application responsibilities
@@ -99,21 +101,27 @@ flowchart TD
 
 ## Browser companion
 
-The browser dashboard is a separate JavaScript implementation intended for quick demonstrations. It supports filing, processing, status updates, undo, search, sorting, dashboard metrics, import/export and persistence through `localStorage`. It does not call the C executable, share its in-memory structures, or synchronize data with another user.
+The browser dashboard is a separate JavaScript implementation intended for quick demonstrations. It supports filing, processing, status updates, undo, search, sorting, dashboard metrics, import/export and persistence through `localStorage`. It does not call the C executable or the optional REST API, share their in-memory structures, or synchronize data with another user.
+
+## Optional REST API backend
+
+The API is a separate local service implemented with Node.js built-in `http` and filesystem modules; it adds no npm runtime dependencies. Start it from the repository root with `node api/server.cjs` (default address `http://127.0.0.1:4174`). Its JSON store is created at `api/data/complaints.json` on first write. The API enforces the same department, priority and basic name/area limits as the browser demo, limits request bodies to 16 KB, and only permits the next status in the complaint lifecycle. It is intentionally bound to loopback for local development and has no authentication; do not expose it to a public network or use real personal data.
 
 ## Persistence and data boundaries
 
 - The C application saves and loads the documented `CIVICDESK 1` text format when the user selects the corresponding menu options.
 - The browser companion stores its state in that browser's `localStorage`; browser data is separate from C save files until explicitly exported/imported.
+- The optional API stores its own records in `api/data/complaints.json`; this is separate from both the C text file and browser `localStorage`.
 - The sample names, areas and complaint details are fictional.
-- No network API, government database or multi-user backend is part of this version.
+- No remote service, government database, multi-user authentication or synchronization between the three parts is part of this version.
 
 ## Verification
 
 The repository includes:
 - C unit/integration tests in `test_civicdesk.c`.
 - Browser-side JavaScript tests in `tests/civicdesk.test.cjs`.
+- REST API tests in `tests/api.test.cjs`.
 - Chromium end-to-end tests in `tests/e2e/civicdesk.spec.cjs`.
-- GitHub Actions jobs for C/JavaScript tests, AddressSanitizer + UndefinedBehaviorSanitizer, and Playwright browser tests.
+- GitHub Actions jobs for C/JavaScript/API tests, AddressSanitizer + UndefinedBehaviorSanitizer, and Playwright browser tests.
 
 See [TESTING.md](TESTING.md) for local commands and CI details.
