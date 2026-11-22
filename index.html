@@ -45,6 +45,7 @@ input:focus,select:focus{border-color:var(--brand);outline:none;box-shadow:0 0 0
 .btn,button{display:inline-flex;align-items:center;justify-content:center;font:inherit;font-weight:700;padding:10px 18px;border-radius:10px;border:1px solid var(--brand);background:var(--brand);color:#fff;cursor:pointer;text-decoration:none;transition:background .15s}
 button:hover,.btn:hover{background:var(--brand-d)}
 button.alt{background:transparent;color:var(--brand)}button.alt:hover{background:rgba(15,157,142,.1)}
+button:disabled{opacity:.42;cursor:not-allowed;filter:saturate(.35)}
 .btn.gold{background:var(--gold);border-color:var(--gold);color:var(--navy)}.btn.gold:hover{background:#d8b45c}
 .btn.ghost{background:transparent;border-color:rgba(255,255,255,.35)}.btn.ghost:hover{background:rgba(255,255,255,.1)}
 :focus-visible{outline:3px solid #6ea8ff;outline-offset:2px}
@@ -672,7 +673,7 @@ async function toggleApiConnection() {
     $("bConnect").textContent = "Connect API";
     $("apiState").textContent = "Browser storage";
     loadLocal(); show(null, "");
-    $("bUndo").disabled = false; $("bImport").disabled = false; $("bReset").disabled = false;
+    $("bUndo").disabled = false; $("bExport").disabled = false; $("bImport").disabled = false; $("bReset").disabled = false;
     return toast("Disconnected. Browser storage is active.");
   }
   try {
@@ -680,7 +681,7 @@ async function toggleApiConnection() {
     await refreshFromApi();
     $("bConnect").textContent = "Use browser storage";
     $("apiState").textContent = "Connected to CivicDesk API";
-    $("bUndo").disabled = true; $("bImport").disabled = true; $("bReset").disabled = true;
+    $("bUndo").disabled = true; $("bExport").disabled = true; $("bImport").disabled = true; $("bReset").disabled = true;
     render();
     toast("Connected. Dashboard data is now loaded from the REST API.");
   } catch (error) {
