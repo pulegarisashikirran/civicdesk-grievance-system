@@ -12,7 +12,9 @@ const SECURITY_HEADERS = Object.freeze({
   "x-frame-options": "DENY",
   "referrer-policy": "no-referrer",
   "permissions-policy": "camera=(), microphone=(), geolocation=()",
-  "cross-origin-resource-policy": "same-origin"
+  "cross-origin-resource-policy": "same-origin",
+  "cross-origin-opener-policy": "same-origin",
+  "x-permitted-cross-domain-policies": "none"
 });
 
 function sendJson(response, statusCode, payload, extraHeaders = {}) {
@@ -46,7 +48,8 @@ function readJson(request) {
       if (tooLarge) return reject(new StoreError(413, "Request body exceeds the 16 KB limit."));
       if (size === 0) return resolve({});
       try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+        const text = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks));
+        resolve(JSON.parse(text));
       } catch {
         reject(new StoreError(400, "Request body must contain valid JSON."));
       }
@@ -68,8 +71,35 @@ async function createApiServer(options = {}) {
   }
   const mutationBuckets = new Map();
 
-  const server = http.createServer(async (request, response) => {
+  const server = http.createServer({ maxHeaderSize: 8 * 1024 }, async (request, response) => {
     try {
+      if (typeof request.url !== "string" || request.url.length > 2048) {
+        throw new StoreError(414, "Request URL is too long.");
+      }
+      let requestHost;
+      try {
+        requestHost = new URL("http://" + request.headers.host);
+      } catch {
+        throw new StoreError(400, "Host header is invalid.");
+      }
+      const boundPort = server.address()?.port;
+      if (!["127.0.0.1", "localhost"].includes(requestHost.hostname) ||
+          Number(requestHost.port || 80) !== boundPort) {
+        throw new StoreError(421, "This service only accepts requests addressed to its local host and port.");
+      }
+      const originHeader = request.headers.origin;
+      if (originHeader) {
+        let requestOrigin;
+        try { requestOrigin = new URL(originHeader); } catch {
+          throw new StoreError(403, "Cross-origin requests are not allowed.");
+        }
+        if (requestOrigin.origin !== "http://" + requestHost.host) {
+          throw new StoreError(403, "Cross-origin requests are not allowed.");
+        }
+      }
+      if (request.headers["sec-fetch-site"] === "cross-site") {
+        throw new StoreError(403, "Cross-site requests are not allowed.");
+      }
       const url = new URL(request.url, "http://127.0.0.1");
       const pathname = url.pathname;
 
