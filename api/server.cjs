@@ -1,6 +1,7 @@
 "use strict";
 
 const http = require("node:http");
+const fs = require("node:fs/promises");
 const path = require("node:path");
 const { ComplaintStore, StoreError } = require("./store.cjs");
 
@@ -55,6 +56,11 @@ async function createApiServer(options = {}) {
       const url = new URL(request.url, "http://127.0.0.1");
       const pathname = url.pathname;
 
+      if (request.method === "GET" && (pathname === "/" || pathname === "/index.html")) {
+        const html = await fs.readFile(path.join(__dirname, "..", "index.html"));
+        response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", "x-content-type-options": "nosniff" });
+        return response.end(html);
+      }
       if (request.method === "GET" && pathname === "/api/health") {
         return sendJson(response, 200, { status: "ok", service: "CivicDesk API" });
       }
