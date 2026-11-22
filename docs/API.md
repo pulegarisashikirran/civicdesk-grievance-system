@@ -34,10 +34,10 @@ On first startup, configure the initial administrator using `CIVICDESK_ADMIN_EMA
 | Role | Permissions |
 |---|---|
 | Citizen | File complaints and list/view only complaints they submitted. Cannot advance status. |
-| Officer | View all complaints and advance their status sequentially. Cannot manage users. |
+| Officer | View and advance only complaints assigned to their account. Cannot manage users or other officers' complaints. |
 | Admin | View all complaints, file complaints, manage users and create staff accounts. |
 
-The schema migration adds `users`, `user_sessions` and `complaint_owners`. Existing complaints remain unassigned after migration; citizens cannot view them, while officers/admins can. The API's existing dashboard page does not yet include an interactive sign-in form; use the authenticated API routes directly, while the GitHub Pages/local browser-storage demo remains available separately.
+The schema adds `users`, `user_sessions`, `complaint_owners` and a nullable `complaints.assigned_to` officer reference. Existing complaints remain unassigned after migration; citizens cannot view them, officers see only their assigned complaints, and admins can view all complaints and assign/unassign officers. The API's existing dashboard page does not yet include an interactive sign-in form; use the authenticated API routes directly, while the GitHub Pages/local browser-storage demo remains available separately.
 
 ## Authentication endpoints
 
@@ -49,7 +49,7 @@ The schema migration adds `users`, `user_sessions` and `complaint_owners`. Exist
 | GET | `/api/auth/me` | Return current account |
 | GET | `/api/users` | Admin: list accounts |
 | POST | `/api/users` | Admin: create officer/admin account |
-| PATCH | `/api/users/:id/active` | Admin: activate/deactivate account |
+| PATCH | `/api/users/:id/active` | Admin: activate/deactivate account |\n| PATCH | `/api/complaints/:id/assignment` | Admin: assign an active officer or pass `null` to unassign |
 
 Passwords must be 12–128 characters and include lowercase, uppercase and a number. Registration accepts no role field. The server uses generic login errors to avoid revealing whether an email exists.
 
@@ -113,7 +113,7 @@ These measures are defense-in-depth for a local educational service, not a subst
 
 ## Database maintenance: migrations, backup and restore
 
-CivicDesk tracks its SQLite schema with `PRAGMA user_version`. New databases are created at schema version 1 and migrated to version 2, which adds indexes for complaint status/priority and area. Each migration runs in a transaction; databases with a newer unsupported schema version are rejected rather than silently downgraded.
+CivicDesk tracks its SQLite schema with `PRAGMA user_version`. New databases are created at schema version 1 and migrated transactionally through version 4: version 2 adds complaint indexes, version 3 adds users/sessions/citizen ownership, and version 4 adds officer assignment. Databases with a newer unsupported schema version are rejected rather than silently downgraded.
 
 Run maintenance commands from the repository root. Stop the API server before restoring:
 
@@ -132,6 +132,6 @@ Backups use SQLite `VACUUM INTO` to create a consistent standalone database. Res
 
 ## Persistence and scope
 
-The API stores complaints in SQLite tables: `complaints`, `complaint_history` and `app_metadata`. Primary keys, check constraints and a foreign key protect the record structure. Complaint creation and status changes use database transactions, so the complaint row and its history entry are committed together. Existing JSON data is migrated once when the SQLite database is first created. Its records remain independent from the C CIVICDESK 1 file and browser localStorage. The locally served dashboard can read and mutate API records while API mode is enabled; the hosted GitHub Pages dashboard continues to use browser localStorage.
+The API stores complaints and assignments in SQLite tables: `complaints`, `complaint_history`, `app_metadata`, `users`, `user_sessions` and `complaint_owners`. Primary keys, check constraints and a foreign key protect the record structure. Complaint creation and status changes use database transactions, so the complaint row and its history entry are committed together. Existing JSON data is migrated once when the SQLite database is first created. Its records remain independent from the C CIVICDESK 1 file and browser localStorage. The locally served dashboard can read and mutate API records while API mode is enabled; the hosted GitHub Pages dashboard continues to use browser localStorage.
 
 This is a local educational API, bound to 127.0.0.1. Authentication and role authorization are implemented, but the service is not a production-grade citizen-data system and has no TLS/network deployment configuration. Do not expose it publicly or submit real personal information. The API is integrated with the locally served browser dashboard; the C executable remains independent.
