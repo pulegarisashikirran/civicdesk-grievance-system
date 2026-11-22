@@ -122,7 +122,7 @@ test("API data survives a server restart", async t => {
   await createComplaint(base, { name: "Persisted citizen" });
 
   await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-  const restarted = await createApiServer({ dataFile });
+  const restarted = await createApiServer({ dataFile, authRequired: false });
   await new Promise((resolve, reject) => {
     restarted.once("error", reject);
     restarted.listen(0, "127.0.0.1", resolve);
@@ -214,7 +214,7 @@ test("API migrates valid legacy JSON records into SQLite without losing history"
       ]
     }]
   }));
-  const server = await createApiServer({ dataFile, legacyDataFile });
+  const server = await createApiServer({ dataFile, legacyDataFile, authRequired: false });
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", resolve);
@@ -384,7 +384,7 @@ test("API rejects unknown fields and control characters", async t => {
 test("API rate-limits writes without blocking read-only requests", async t => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-rate-limit-"));
   const dataFile = path.join(directory, "civicdesk.sqlite");
-  const server = await createApiServer({ dataFile, rateLimit: { windowMs: 60_000, max: 2 } });
+  const server = await createApiServer({ dataFile, authRequired: false, rateLimit: { windowMs: 60_000, max: 2 } });
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", resolve);
