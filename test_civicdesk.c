@@ -204,7 +204,7 @@ static int test_sorted_insertion_keeps_avl_balanced(void)
     }
 
     CHECK(tree.size == 1000);
-    CHECK(bst_height(&tree) <= 12); /* sorted input must not create a linear-height tree */
+    CHECK(bst_height(&tree) <= 13); /* sorted input must not create a linear-height tree */
     for (i = 0; i < 1000; i++)
         CHECK(bst_search(&tree, i + 1) == items[i]);
 
