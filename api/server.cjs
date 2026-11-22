@@ -103,7 +103,10 @@ async function createApiServer(options = {}) {
           throw new StoreError(403, "Cross-origin requests are not allowed.");
         }
       }
-      if (request.headers["sec-fetch-site"] === "cross-site") {
+      // Cross-site top-level navigations may legitimately open the local dashboard.
+      // Block cross-site state-changing requests; same-origin checks above remain in force.
+      if (request.headers["sec-fetch-site"] === "cross-site" &&
+          !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
         throw new StoreError(403, "Cross-site requests are not allowed.");
       }
       const url = new URL(request.url, "http://127.0.0.1");
