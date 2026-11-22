@@ -4,7 +4,7 @@
 
 **A data-structures-driven complaint management system built in C99, with a browser demo and an optional Node.js REST API.**
 
-CivicDesk models how public-service complaints can be registered, prioritised, tracked, searched and reported. The C application combines three linked-list priority queues, per-complaint status histories, a stack-based undo feature and a self-balancing AVL tree. Five sorting algorithms and three search approaches support reporting and performance comparisons. A local REST API provides SQLite persistence, password-hashed accounts, session authentication and citizen/officer/admin authorization. When served from the API origin, the browser dashboard can connect to it; the hosted GitHub Pages demo continues to use localStorage.
+CivicDesk models how public-service complaints can be registered, prioritised, tracked, searched and reported. The C application combines three linked-list priority queues, per-complaint status histories, a stack-based undo feature and a self-balancing AVL tree. Five sorting algorithms and three search approaches support reporting and performance comparisons. A local REST API provides SQLite persistence, password-hashed accounts, session authentication and citizen/officer/admin authorization. Administrators assign complaints to officers; officers can only view and update their assigned work. When served from the API origin, the browser dashboard can connect to it; the hosted GitHub Pages demo continues to use localStorage.
 
 <details>
 <summary><strong>Project at a glance</strong></summary>
@@ -43,7 +43,7 @@ The C99 console application is the original data-structures implementation. The 
 * 12 pre-loaded sample complaints (some already in progress or resolved) so every feature can be demonstrated immediately.
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
 * Optional REST API (`api/server.cjs`): health check, complaint creation/list/detail, sequential status updates, request validation and transactional SQLite storage with versioned schema migrations and backup/recovery, using Node.js built-in modules only.
-* 39 automated C tests, 19 browser JavaScript tests and 19 REST API tests cover data structures, algorithms, API validation, persistence and system rules.
+* 39 automated C tests, 19 browser JavaScript tests and 24 REST API tests cover data structures, algorithms, API validation, persistence and system rules.
 * SQLite schema migrations are versioned and transactional; a maintenance CLI creates validated backups and restores them with a pre-restore safety copy.
 * 3 Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, CivicDesk file import/export, and dashboard-to-API persistence.
 * Complete memory clean-up on exit: every node and complaint is freed; GitHub Actions runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
