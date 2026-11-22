@@ -23,7 +23,7 @@ CivicDesk models how public-service complaints can be registered, prioritised, t
 
 **[▶ Open the live browser demo](https://pulegarisashikirran.github.io/civicdesk-grievance-system/)** · [Browse source code](https://github.com/pulegarisashikirran/civicdesk-grievance-system/tree/civicdesk-reliability-upgrades) · [View development commits](https://github.com/pulegarisashikirran/civicdesk-grievance-system/commits/civicdesk-reliability-upgrades/)
 
-**Technical guides:** [Architecture and data flow](docs/ARCHITECTURE.md) · [Testing and CI](docs/TESTING.md) · [Resume and interview guide](docs/PORTFOLIO.md)
+**Technical guides:** [Architecture and data flow](docs/ARCHITECTURE.md) · [Testing and CI](docs/TESTING.md) · [Performance and scalability](docs/PERFORMANCE.md) · [Resume and interview guide](docs/PORTFOLIO.md)
 
 The C99 console application is the main implementation. The separate JavaScript browser demo reproduces the core data-structure workflows for convenient interactive demonstration; it does not connect to the C executable. All sample names, areas and complaints are fictional. No data is sent to a real government system.
 
@@ -37,11 +37,11 @@ The C99 console application is the main implementation. The separate JavaScript 
 * A self-balancing AVL tree keyed by complaint ID for guaranteed logarithmic lookup and sorted listing (in-order traversal).
 * Search by complaint ID (AVL search and binary search), and by citizen name or area (linear search, case-insensitive).
 * Reports sorted by pending days, area, complaint ID or priority using five implemented algorithms: bubble, selection, insertion, merge and quick sort, all working on the same comparator-based interface.
-* A benchmark that times all five sorts and all three search methods on the same random data.
+* Benchmarks for all five sorting algorithms and three search methods, plus a standalone 1,000–50,000-record AVL and priority-queue scalability benchmark.
 * Pending-day calculation that stops counting once a complaint is resolved.
 * 12 pre-loaded sample complaints (some already in progress or resolved) so every feature can be demonstrated immediately.
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
-* 34 automated C tests and 19 JavaScript unit tests covering the data structures, algorithms, saving and loading, and system rules.\n* Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, and CivicDesk file import/export.
+* 36 automated C tests and 19 JavaScript unit tests covering the data structures, algorithms, saving and loading, and system rules.\n* Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, and CivicDesk file import/export.
 * Complete memory clean-up on exit: every node and complaint is freed; GitHub Actions runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Data Structures & Algorithms — Topics Used, Locations & Logic
@@ -340,7 +340,7 @@ gcc -std=c99 -g -fsanitize=address,undefined -o civicdesk_check main.c util.c st
 ./civicdesk_check
 ```
 
-The benchmark option (menu item 8) runs the sorting and searching algorithms on generated complaint data. Larger datasets take longer because Bubble, Selection and Insertion Sort have O(n²) time complexity.
+The benchmark option (menu item 8) runs the sorting and searching algorithms on generated complaint data. Larger datasets take longer because Bubble, Selection and Insertion Sort have O(n²) time complexity. For larger AVL and queue workloads, see the [standalone scalability benchmark](docs/PERFORMANCE.md).
 
 ### Benchmark methodology
 
@@ -377,7 +377,7 @@ The AVL tree height was 17 for this generated dataset. Binary Search's displayed
 **Observations:** The quadratic sorting algorithms take substantially longer as the input grows, while Merge Sort and Quick Sort remain much faster on these generated datasets. The search measurements also show why linear scanning can be more expensive than searching an indexed or sorted collection. These are observations from this one local environment, not universal performance guarantees.
 
 
-## Sample Outputs
+## Performance and scalability benchmark\n\nA separate tool measures AVL insertion/search and priority-queue enqueue/dequeue at 1,000, 10,000 and 50,000 complaints. It reports the median of three deterministic runs, AVL height and an explicitly labelled structural memory estimate. See [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for the workload, interpretation and Windows/Linux build commands.\n\n## Sample Outputs
 
 ### 1. Main Menu
 ![Main Menu](screenshots/main-menu.png)
@@ -413,7 +413,7 @@ bst.h/.c              Binary Search Tree of complaints keyed by ID
 search_sort.h/.c      linear_search, binary_search, five sorts, comparators, benchmarks
 sample_data.h/.c      12 sample complaints and a random complaint generator for benchmarks
 util.h/.c             Safe allocation, string helpers, date conversion
-test_civicdesk.c      36 automated C tests for the structures, algorithms, data files and system rules
+test_civicdesk.c      36 automated C tests for the structures, algorithms, data files and system rules\ntools/scalability_benchmark.c  Standalone repeatable AVL and queue benchmark
  tests/civicdesk.test.cjs 19 automated JavaScript tests for browser-side data structures and algorithms
  .github/workflows/c-ci.yml Builds, tests and runs C memory-safety checks on GitHub Actions
 Makefile              Builds civicdesk and test_civicdesk
@@ -439,7 +439,7 @@ The requested direction is a complaint-management project built only on the topi
 
 **Automated test coverage:** The 36-test C suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, and that all five algorithms preserve the input elements and correctly sort 25 deterministic random datasets (five sizes, five seeds) across all four sort fields, that quick sort handles sorted and reversed input, that merge sort is stable, that AVL search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data; null system pointers, null paths and empty paths are rejected safely.
 
-**Still pending / sensible next steps:** sharing data between programs through a server and a database, deletion support and further AVL stress tests, a graphical or web interface, and more tests for the menu input handling.
+**Still pending / sensible next steps:** sharing data between programs through a server and a database, AVL deletion support, and more tests for menu input handling.
 
 **JavaScript test coverage:** The 19-test suite checks status history, pending days, FIFO and priority queues, undo-stack behavior, BST operations, linear and binary search, all five sorting algorithms, empty/single-item inputs, merge-sort stability, complaint form validation, keyboard activation, skip navigation, and accessible complaint-row selection. GitHub Actions runs both test suites and also compiles and runs the C suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
