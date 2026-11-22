@@ -6,11 +6,11 @@ CivicDesk uses three layers of automated checks. Run the C and JavaScript suites
 
 | Layer | Test file / command | What it checks |
 |---|---|---|
-| C | `test_civicdesk.c` | Data structures, priority behavior, AVL/search/sort logic, undo, validation and file persistence |
+| C | `test_civicdesk.c` | Data structures, priority behavior, AVL rotations and randomized invariant stress checks, search/sort logic, undo, validation and file persistence |
 | JavaScript | `tests/civicdesk.test.cjs` | Browser-side structures and algorithms, dashboard metrics, validation and accessibility helpers |
 | Browser end-to-end | `tests/e2e/civicdesk.spec.cjs` | Real dashboard workflows, metric changes, refresh persistence, import and export |
 
-The current repository documents **34 C tests, 19 JavaScript tests and 2 Playwright end-to-end scenarios**. CI runs the suites on pushes and pull requests.
+The current repository documents **35 C tests, 19 JavaScript tests and 2 Playwright end-to-end scenarios**. CI runs the suites on pushes and pull requests.
 
 ## C tests (Windows PowerShell)
 
