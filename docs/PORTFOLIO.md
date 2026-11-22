@@ -15,7 +15,7 @@ It is an educational project: the browser companion does not connect to the C pr
 - Built a C99 complaint-management application using linked-list priority queues, an AVL-tree ID index, status-history lists and a linked-list undo stack.
 - Implemented complaint processing, validation, save/load persistence, linear and binary search, and five sorting algorithms (bubble, selection, insertion, merge and quick sort).
 - Created a separate JavaScript dashboard with complaint filing, status updates, undo, search/sort, summary metrics, import/export and localStorage persistence.
-- Added automated verification with 34 C tests, 19 JavaScript tests and 2 Playwright browser end-to-end scenarios; configured GitHub Actions for build, tests and sanitizer checks.
+- Added automated verification with 39 C tests, 19 JavaScript tests and 2 Playwright browser end-to-end scenarios; configured GitHub Actions for build, tests and sanitizer checks.
 
 **Tip:** Keep only the bullets that fit your resume and that you can confidently explain. Add the repository and live demo links beside the project title.
 
