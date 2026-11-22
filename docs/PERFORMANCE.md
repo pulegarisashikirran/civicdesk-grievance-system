@@ -46,3 +46,20 @@ The program validates each insertion, lookup and queue operation. It also checks
 ## Existing sorting benchmark
 
 The menu's sorting benchmark remains limited to 1,000, 5,000 and 10,000 items because Bubble, Selection and Insertion Sort have O(n²) worst-case time. Use the scalability tool for larger AVL and queue workloads rather than running quadratic sorts on 50,000 records.
+
+
+## Recorded local scalability results
+
+The following results were captured by the project author on a Windows machine using GCC with `-O2`. Each value is the median of three runs. Times are in milliseconds.
+
+| Complaints | AVL insert | AVL search | Queue add | Queue drain | AVL height | Estimated structural bytes |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1,000 | 0.00 | 1.00 | 0.00 | 0.00 | 12 | 216,000 |
+| 10,000 | 7.00 | 15.00 | 1.00 | 1.00 | 16 | 2,160,000 |
+| 50,000 | 45.00 | 141.00 | 6.00 | 4.00 | 19 | 10,800,000 |
+
+The search workload performs five successful ID lookups per complaint, capped at 250,000 total lookups. Therefore, the 50,000-record row represents 250,000 successful lookups.
+
+**Interpretation:** the AVL height increased from 12 to 19 across the tested dataset sizes, consistent with the tree remaining balanced. At 50,000 records, the measured run reported 45 ms for insertion, 141 ms for 250,000 lookups, 6 ms for queue insertion and 4 ms for draining.
+
+**Important measurement limits:** the displayed 0.00 ms values are below the timer's two-decimal display precision, not literal zero-duration operations. The byte figure is a structural lower-bound estimate—not measured process memory/RSS—and excludes allocator overhead and other runtime allocations. These are results from one local Windows/GCC environment, not universal performance guarantees.
