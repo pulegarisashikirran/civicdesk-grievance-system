@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
+const { DatabaseSync } = require("node:sqlite");
 const { createApiServer } = require("../api/server.cjs");
 
 async function startTestServer(t) {
@@ -165,4 +166,75 @@ test("API server serves the browser dashboard from the same origin", async t => 
   assert.match(response.headers.get("content-type"), /text\/html/);
   assert.match(html, /Connect API/);
   assert.match(html, /refreshFromApi/);
+});
+
+
+test("API stores complaints and status history in SQLite tables", async t => {
+  const { base, dataFile } = await startTestServer(t);
+  await createComplaint(base);
+  await fetch(base + "/api/complaints/1000/status", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ status: "Assigned", remarks: "Team notified" })
+  });
+
+  const header = await fs.readFile(dataFile);
+  assert.equal(header.subarray(0, 16).toString("utf8"), "SQLite format 3\u0000");
+  const database = new DatabaseSync(dataFile);
+  try {
+    assert.equal(database.prepare("SELECT COUNT(*) AS count FROM complaints").get().count, 1);
+    assert.equal(database.prepare("SELECT COUNT(*) AS count FROM complaint_history").get().count, 2);
+    assert.equal(database.prepare("SELECT status FROM complaints WHERE id = 1000").get().status, "Assigned");
+  } finally {
+    database.close();
+  }
+});
+
+test("API migrates valid legacy JSON records into SQLite without losing history", async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-migration-"));
+  const dataFile = path.join(directory, "civicdesk.sqlite");
+  const legacyDataFile = path.join(directory, "complaints.json");
+  const now = "2026-11-22T10:00:00.000Z";
+  await fs.writeFile(legacyDataFile, JSON.stringify({
+    version: 1,
+    nextId: 1001,
+    complaints: [{
+      id: 1000, name: "Legacy Citizen", area: "Madhapur", department: "Roads",
+      priority: "High", status: "Assigned", remarks: "Assigned to team",
+      createdAt: now, updatedAt: now,
+      history: [
+        { status: "Filed", remarks: "Complaint registered", at: now },
+        { status: "Assigned", remarks: "Assigned to team", at: now }
+      ]
+    }]
+  }));
+  const server = await createApiServer({ dataFile, legacyDataFile });
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  t.after(async () => {
+    await new Promise(resolve => server.close(resolve));
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+
+  const base = "http://127.0.0.1:" + server.address().port;
+  const migrated = await (await fetch(base + "/api/complaints/1000")).json();
+  assert.equal(migrated.name, "Legacy Citizen");
+  assert.equal(migrated.status, "Assigned");
+  assert.equal(migrated.history.length, 2);
+  const created = await createComplaint(base, { name: "New Citizen" });
+  assert.equal((await created.json()).id, 1001);
+});
+
+test("API assigns unique increasing IDs to concurrent complaint submissions", async t => {
+  const { base } = await startTestServer(t);
+  const responses = await Promise.all(
+    Array.from({ length: 20 }, (_, index) =>
+      createComplaint(base, { name: "Citizen " + index }))
+  );
+  assert.ok(responses.every(response => response.status === 201));
+  const ids = (await Promise.all(responses.map(response => response.json())))
+    .map(item => item.id).sort((a, b) => a - b);
+  assert.deepEqual(ids, Array.from({ length: 20 }, (_, index) => 1000 + index));
 });
