@@ -9,9 +9,9 @@ CivicDesk uses four automated test suites. Run the C, JavaScript and REST API su
 | C | `test_civicdesk.c` | Data structures, priority behavior, AVL rotations and randomized AVL and sorting stress checks, a 10,000-complaint system integration stress test, queue reuse after draining and oversized-file rejection, search/sort logic, undo, validation and file persistence |
 | Browser JavaScript | `tests/civicdesk.test.cjs` | Browser-side structures and algorithms, dashboard metrics, validation and accessibility helpers |
 | REST API | `tests/api.test.cjs` | HTTP routes, input validation, status lifecycle, JSON persistence, malformed and oversized requests |
-| Browser end-to-end | `tests/e2e/civicdesk.spec.cjs` | Real dashboard workflows, metric changes, refresh persistence, import and export |
+| Browser end-to-end | `tests/e2e/civicdesk.spec.cjs` | Real dashboard workflows, metric changes, refresh persistence, import/export, and dashboard-to-REST-API integration |
 
-The current repository documents **39 C tests, 19 browser JavaScript tests, 9 REST API tests and 2 Playwright end-to-end scenarios (68 total)**. CI runs the suites on pushes and pull requests.
+The current repository documents **39 C tests, 19 browser JavaScript tests, 9 REST API tests and 3 Playwright end-to-end scenarios (70 total)**. CI runs the suites on pushes and pull requests.
 
 ## C tests (Windows PowerShell)
 
@@ -44,7 +44,7 @@ The local service listens at `http://127.0.0.1:4174`. Quick health check:
 Invoke-RestMethod http://127.0.0.1:4174/api/health
 ```
 
-The API stores its data in the ignored local file `api/data/complaints.json`. See [API.md](API.md) for endpoints and example requests. The API is a separate development service and is not connected to the browser dashboard or C application.
+The API stores its data in the ignored local file `api/data/complaints.json`. See [API.md](API.md) for endpoints and example requests. The API also serves the browser dashboard from the same origin. Selecting **Connect API** switches dashboard complaint operations to the REST backend; the C console remains independent.
 
 ## Playwright browser tests (Windows PowerShell)
 
