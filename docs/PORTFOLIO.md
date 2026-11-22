@@ -16,7 +16,7 @@ It is an educational project: the browser dashboard can use the local API when e
 - Implemented complaint processing, validation, save/load persistence, linear and binary search, and five sorting algorithms (bubble, selection, insertion, merge and quick sort).
 - Created a JavaScript dashboard with complaint filing, status updates, search/sort, summary metrics and import/export, supporting browser localStorage or optional REST API mode.
 - Added an optional Node.js REST API with validated complaint endpoints, sequential status transitions and transactional SQLite storage, versioned schema migrations, validated backup/restore and one-time migration from the previous JSON data file; the browser can connect to it while the C console remains independent.
-- Added 84 automated checks: 39 C tests, 19 browser JavaScript tests, 23 API tests and 3 Playwright end-to-end scenarios; configured GitHub Actions for build, tests, browser/API integration and sanitizer checks.
+- Added 85 automated checks: 39 C tests, 19 browser JavaScript tests, 24 API tests and 3 Playwright end-to-end scenarios; configured GitHub Actions for build, tests, browser/API integration and sanitizer checks.
 
 **Tip:** Keep only the bullets that fit your resume and that you can confidently explain. Add the repository and live demo links beside the project title.
 
@@ -36,7 +36,7 @@ A C99 and JavaScript grievance-management demo with an optional Node.js REST API
 | Sorting | Bubble, selection, insertion, merge and quick sort | Compare time complexity and stability |
 | C persistence | CIVICDESK 1 text format | Validate input and avoid replacing a valid save with a partial write |
 | Browser persistence | localStorage | Data belongs to that browser and is separate from C save files |
-| REST API | Node.js built-in HTTP server and SQLite store | Exposes local complaint endpoints; versioned schema migrations and backup/recovery protect stored data |
+| REST API | Node.js built-in HTTP server and SQLite store | Password-hashed accounts, sessions, citizen ownership, officer assignments, admin user management and versioned database migrations |
 | Verification | C, Node test runner, Playwright and CI | Tests cover logic, API behavior, browser behavior and memory-safety checks |
 
 ## Complexity reference
@@ -89,8 +89,8 @@ No. It is a separate JavaScript companion with its own browser state and localSt
 
 ## Honest limitations and possible future work
 
-- No authentication, roles, or multi-user access.
-- No remote database, API, or government-system integration.
+- The API has authentication and role checks, but the browser dashboard does not yet provide an interactive sign-in screen.
+- No public deployment or government-system integration.
 - Browser data is local to the browser; it is not synchronized with the C application.
 - The project uses sample data and is not intended for real citizens' personal information.
 - A future full-stack version could add a documented API, authentication, role-based access, deployment and integration tests.
