@@ -14,7 +14,7 @@ const { createBackup, restoreBackup, inspectDatabase } = require("../api/mainten
 async function startTestServer(t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-api-"));
   const dataFile = path.join(directory, "civicdesk.sqlite");
-  const server = await createApiServer({ dataFile });
+  const server = await createApiServer({ dataFile, authRequired: false });
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", resolve);
