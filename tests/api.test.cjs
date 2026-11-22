@@ -155,3 +155,14 @@ test("API returns clear errors for missing records and unknown routes", async t 
   const unknown = await fetch(base + "/api/not-a-route");
   assert.equal(unknown.status, 404);
 });
+
+
+test("API server serves the browser dashboard from the same origin", async t => {
+  const { base } = await startTestServer(t);
+  const response = await fetch(base + "/");
+  const html = await response.text();
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /text\/html/);
+  assert.match(html, /Connect API/);
+  assert.match(html, /refreshFromApi/);
+});
