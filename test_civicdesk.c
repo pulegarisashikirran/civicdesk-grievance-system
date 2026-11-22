@@ -923,6 +923,107 @@ static int test_system_rejects_invalid_complaints(void)
     return failed_here;
 }
 
+
+/* Reuse a linked queue after it has been completely drained. */
+static int test_queue_can_be_reused_after_becoming_empty(void)
+{
+    LinkedQueue q;
+    Complaint *a = complaint_create(7101, "A", "Area", "Roads",
+                                    PRIORITY_NORMAL, today_day());
+    Complaint *b = complaint_create(7102, "B", "Area", "Roads",
+                                    PRIORITY_NORMAL, today_day());
+    int failed_here = 0;
+
+    queue_init(&q);
+    CHECK(queue_enqueue(&q, a) == 1);
+    CHECK(queue_enqueue(&q, b) == 1);
+    CHECK(queue_dequeue(&q) == a);
+    CHECK(queue_dequeue(&q) == b);
+    CHECK(queue_is_empty(&q));
+    CHECK(q.front == NULL && q.rear == NULL && q.size == 0);
+
+    CHECK(queue_enqueue(&q, b) == 1);
+    CHECK(q.front == b && q.rear == b && q.size == 1);
+    CHECK(queue_dequeue(&q) == b);
+    CHECK(queue_is_empty(&q));
+
+    queue_free(&q);
+    complaint_free(a);
+    complaint_free(b);
+    return failed_here;
+}
+
+/* Exercise array growth, AVL indexing and all priority queues together at scale. */
+static int test_large_system_stress_and_priority_order(void)
+{
+    enum { ITEM_COUNT = 10000 };
+    GrievanceSystem sys;
+    Complaint **generated = generate_random_complaints(ITEM_COUNT, 20261122u);
+    int failed_here = 0, i, p, drained = 0;
+
+    if (generated == NULL)
+        return 1;
+
+    system_init(&sys);
+    for (i = 0; i < ITEM_COUNT; i++)
+        CHECK(system_add_complaint(&sys, generated[i]) == 1);
+
+    CHECK(sys.count == ITEM_COUNT);
+    CHECK(sys.capacity >= ITEM_COUNT);
+    CHECK(sys.bst.size == ITEM_COUNT);
+    CHECK(pqm_total(&sys.queues) == ITEM_COUNT);
+    CHECK(bst_height(&sys.bst) <= 20);
+
+    for (i = 0; i < ITEM_COUNT; i++)
+        CHECK(bst_search(&sys.bst, sys.all[i]->cid) == sys.all[i]);
+
+    /* Drain in priority order while preserving arrival order within each priority. */
+    for (p = 0; p < PRIORITY_COUNT; p++) {
+        for (i = 0; i < ITEM_COUNT; i++) {
+            if ((int)sys.all[i]->priority == p) {
+                CHECK(pqm_dequeue_next(&sys.queues) == sys.all[i]);
+                drained++;
+            }
+        }
+    }
+
+    CHECK(drained == ITEM_COUNT);
+    CHECK(pqm_total(&sys.queues) == 0);
+    CHECK(sys.count == ITEM_COUNT);
+    CHECK(sys.bst.size == ITEM_COUNT);
+
+    free(generated); /* system now owns every complaint */
+    system_free(&sys);
+    return failed_here;
+}
+
+/* A physical record longer than the loader's fixed line buffer must be rejected atomically. */
+static int test_load_rejects_oversized_line_without_changing_data(void)
+{
+    GrievanceSystem sys;
+    char error[100];
+    char oversized[700];
+    size_t i;
+    int failed_here = 0;
+
+    load_into(&sys);
+    strcpy(oversized, "CIVICDESK 1\n");
+    for (i = strlen(oversized); i < sizeof oversized - 2; i++)
+        oversized[i] = 'A';
+    oversized[sizeof oversized - 2] = '\n';
+    oversized[sizeof oversized - 1] = '\0';
+
+    write_text_file(oversized);
+    CHECK(system_load(&sys, TEST_FILE, error, sizeof error) == -1);
+    CHECK(error[0] != '\0');
+    CHECK(sys.count == 12);
+    CHECK(bst_search(&sys.bst, 4821) != NULL);
+
+    system_free(&sys);
+    remove(TEST_FILE);
+    return failed_here;
+}
+
 int main(void)
 {
     printf("CivicDesk tests\n");
@@ -955,6 +1056,9 @@ int main(void)
     RUN(test_empty_bst_search_and_traversal);
     RUN(test_priority_queue_counts_are_consistent);
     RUN(test_queue_rejects_invalid_inputs);
+    RUN(test_queue_can_be_reused_after_becoming_empty);
+    RUN(test_large_system_stress_and_priority_order);
+    RUN(test_load_rejects_oversized_line_without_changing_data);
     RUN(test_system_rejects_invalid_complaints);
     RUN(test_history_last_day_after_removal);
 
