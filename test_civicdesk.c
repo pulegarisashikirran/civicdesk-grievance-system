@@ -81,6 +81,44 @@ static int test_all_sorts_match_reference(void)
     return failed_here;
 }
 
+static int test_sorts_handle_many_deterministic_random_inputs(void)
+{
+    static const int sizes[] = {3, 17, 64, 127, 256};
+    int failed_here = 0, s, seed, key, algorithm;
+
+    for (s = 0; s < 5; s++) {
+        int n = sizes[s];
+        for (seed = 1; seed <= 5; seed++) {
+            Complaint **data = generate_random_complaints(n, seed * 101 + s);
+            for (key = 0; key < SORT_KEY_COUNT; key++) {
+                Complaint **reference = copy_array(data, n);
+                insertion_sort(reference, n, SORT_KEY_COMPARATORS[key]);
+
+                for (algorithm = 0; algorithm < SORT_ALGORITHM_COUNT; algorithm++) {
+                    Complaint **work = copy_array(data, n);
+                    int i, j;
+
+                    SORT_FUNCTIONS[algorithm](work, n, SORT_KEY_COMPARATORS[key]);
+                    CHECK(same_order(work, reference, n, SORT_KEY_COMPARATORS[key]));
+
+                    /* Sorting must preserve every original pointer exactly once. */
+                    for (i = 0; i < n; i++) {
+                        int occurrences = 0;
+                        for (j = 0; j < n; j++)
+                            if (work[j] == data[i])
+                                occurrences++;
+                        CHECK(occurrences == 1);
+                    }
+                    free(work);
+                }
+                free(reference);
+            }
+            free_complaints(data, n);
+        }
+    }
+    return failed_here;
+}
+
 static int test_quick_sort_on_sorted_and_reversed_input(void)
 {
     int failed_here = 0, i, n = 2000;
@@ -889,6 +927,7 @@ int main(void)
 {
     printf("CivicDesk tests\n");
     RUN(test_all_sorts_match_reference);
+    RUN(test_sorts_handle_many_deterministic_random_inputs);
     RUN(test_quick_sort_on_sorted_and_reversed_input);
     RUN(test_merge_sort_is_stable);
     RUN(test_bst_and_binary_search_find_every_complaint);
