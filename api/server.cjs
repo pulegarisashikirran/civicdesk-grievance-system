@@ -111,7 +111,7 @@ async function createApiServer(options = {}) {
       const cookies = Object.fromEntries(String(request.headers.cookie || "").split(";").map(part => { const i = part.indexOf("="); return i < 0 ? ["", ""] : [part.slice(0,i).trim(), decodeURIComponent(part.slice(i+1).trim())]; }).filter(([key]) => key));
       const sessionToken = cookies.civicdesk_session || "";
       const currentUser = auth.authenticate(sessionToken);
-      const requireUser = () => { if (!currentUser) throw new StoreError(401, "Please sign in to continue."); return currentUser; };
+      const requireUser = () => { if (options.authRequired === false) return { id: 0, role: "admin", email: "test-mode@localhost" }; if (!currentUser) throw new StoreError(401, "Please sign in to continue."); return currentUser; };
       const requireRole = (...roles) => { if (options.authRequired === false) return { id: 0, role: "admin" }; const user = requireUser(); if (!roles.includes(user.role)) throw new StoreError(403, "Your account does not have permission to perform this action."); return user; };
       const sessionCookie = token => "civicdesk_session=" + token + "; HttpOnly; SameSite=Strict; Path=/; Max-Age=" + Math.floor(SESSION_MS / 1000);
 
