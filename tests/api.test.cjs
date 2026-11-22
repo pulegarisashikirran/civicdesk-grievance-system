@@ -263,10 +263,11 @@ test("SQLite schema upgrades from version 1 to version 4 without losing records"
   try {
     const check = new DatabaseSync(dataFile);
     try {
-      assert.equal(check.prepare("PRAGMA user_version").get().user_version, 3);
+      assert.equal(check.prepare("PRAGMA user_version").get().user_version, 4);
       const indexes = check.prepare("SELECT name FROM sqlite_master WHERE type = 'index'").all().map(row => row.name);
       assert.ok(indexes.includes("idx_complaints_status_priority"));
       assert.ok(indexes.includes("idx_complaints_area"));
+      assert.ok(indexes.includes("idx_complaints_assigned_to"));
     } finally {
       check.close();
     }
