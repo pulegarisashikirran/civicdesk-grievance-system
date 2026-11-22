@@ -4,24 +4,25 @@ Use this page as a source for your resume, GitHub profile, project demonstration
 
 ## 30-second project explanation
 
-CivicDesk is a data-structures-based public grievance management demonstration. The C99 console application registers complaints, places them into priority-based FIFO queues, tracks status history, indexes complaint IDs with an AVL tree, supports searching and sorting, and saves/loads records. A separate JavaScript browser companion demonstrates similar workflows with a dashboard and browser-local persistence.
+CivicDesk is a data-structures-based public grievance management demonstration. The C99 console application registers complaints, places them into priority-based FIFO queues, tracks status history, indexes complaint IDs with an AVL tree, supports searching and sorting, and saves/loads records. A separate JavaScript browser companion demonstrates similar workflows with a dashboard and browser-local persistence. An optional Node.js REST API exposes complaint creation, listing, lookup and status transitions with JSON-file persistence.
 
-It is an educational project: the browser companion does not connect to the C program, a government system, or a remote multi-user backend.
+It is an educational project: the browser companion, C console and local API are independent; they do not synchronize with each other or connect to a government system.
 
 ## Resume-ready entry
 
-**CivicDesk — Public Grievance Redressal System** | C99, Data Structures & Algorithms, JavaScript, HTML, CSS, Node.js, Playwright, GitHub Actions
+**CivicDesk — Public Grievance Redressal System** | C99, Data Structures & Algorithms, JavaScript, HTML, CSS, Node.js REST API, Playwright, GitHub Actions
 
 - Built a C99 complaint-management application using linked-list priority queues, an AVL-tree ID index, status-history lists and a linked-list undo stack.
 - Implemented complaint processing, validation, save/load persistence, linear and binary search, and five sorting algorithms (bubble, selection, insertion, merge and quick sort).
 - Created a separate JavaScript dashboard with complaint filing, status updates, undo, search/sort, summary metrics, import/export and localStorage persistence.
-- Added automated verification with 39 C tests, 19 JavaScript tests and 2 Playwright browser end-to-end scenarios; configured GitHub Actions for build, tests and sanitizer checks.
+- Added an optional Node.js REST API with validated complaint endpoints, sequential status transitions and persistent JSON storage; it runs independently of the browser and C console.
+- Added 68 automated checks: 39 C tests, 19 browser JavaScript tests, 8 API tests and 2 Playwright end-to-end scenarios; configured GitHub Actions for build, tests and sanitizer checks.
 
 **Tip:** Keep only the bullets that fit your resume and that you can confidently explain. Add the repository and live demo links beside the project title.
 
 ## Short GitHub / portfolio description
 
-A C99 and JavaScript grievance-management demo featuring AVL indexing, priority queues, status history, undo, search/sort algorithms, file persistence and automated testing.
+A C99 and JavaScript grievance-management demo with an optional Node.js REST API, featuring AVL indexing, priority queues, status history, undo, search/sort algorithms, persistence and automated testing.
 
 ## Technical highlights to explain
 
@@ -35,7 +36,8 @@ A C99 and JavaScript grievance-management demo featuring AVL indexing, priority 
 | Sorting | Bubble, selection, insertion, merge and quick sort | Compare time complexity and stability |
 | C persistence | CIVICDESK 1 text format | Validate input and avoid replacing a valid save with a partial write |
 | Browser persistence | localStorage | Data belongs to that browser and is separate from C save files |
-| Verification | C, Node test runner, Playwright and CI | Tests cover logic, browser behavior and memory-safety checks |
+| REST API | Node.js built-in HTTP server and JSON store | Exposes local complaint endpoints; records are separate from browser and C data |
+| Verification | C, Node test runner, Playwright and CI | Tests cover logic, API behavior, browser behavior and memory-safety checks |
 
 ## Complexity reference
 
