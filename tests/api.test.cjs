@@ -1,5 +1,6 @@
 "use strict";
 
+const http = require("node:http");
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
@@ -343,8 +344,21 @@ test("API rejects cross-origin and DNS-rebinding-style host requests", async t =
   });
   assert.equal(crossOrigin.status, 403);
 
-  const hostileHost = await fetch(base + "/api/health", { headers: { host: "attacker.example" } });
-  assert.equal(hostileHost.status, 421);
+  const parsed = new URL(base);
+  const hostileHost = await new Promise((resolve, reject) => {
+    const request = http.request({
+      hostname: parsed.hostname,
+      port: Number(parsed.port),
+      path: "/api/health",
+      headers: { host: "attacker.example" }
+    }, response => {
+      response.resume();
+      resolve(response.statusCode);
+    });
+    request.on("error", reject);
+    request.end();
+  });
+  assert.equal(hostileHost, 421);
 
   const list = await (await fetch(base + "/api/complaints")).json();
   assert.equal(list.count, 0);
@@ -355,14 +369,14 @@ test("API rejects unknown fields and control characters", async t => {
   const unknown = await createComplaint(base, { isAdmin: true });
   assert.equal(unknown.status, 400);
 
-  const control = await createComplaint(base, { name: "Asha\\nInjected" });
+  const control = await createComplaint(base, { name: "Asha\nInjected" });
   assert.equal(control.status, 400);
 
   await createComplaint(base);
   const badRemarks = await fetch(base + "/api/complaints/1000/status", {
     method: "PATCH",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ status: "Assigned", remarks: "line\\nbreak" })
+    body: JSON.stringify({ status: "Assigned", remarks: "line\nbreak" })
   });
   assert.equal(badRemarks.status, 400);
 });
