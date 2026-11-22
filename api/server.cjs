@@ -5,7 +5,6 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { ComplaintStore, StoreError } = require("./store.cjs");
 const { AuthService, SESSION_MS } = require("./auth.cjs");
-const { AuthService, SESSION_MS } = require("./auth.cjs");
 
 const MAX_BODY_BYTES = 16 * 1024;
 const DEFAULT_RATE_LIMIT = Object.freeze({ windowMs: 60_000, max: 60 });
