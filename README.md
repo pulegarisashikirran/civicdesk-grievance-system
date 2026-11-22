@@ -16,7 +16,7 @@ CivicDesk models how public-service complaints can be registered, prioritised, t
 | Optional API backend | Node.js built-in HTTP server and SQLite storage |
 | Data structures | Linked lists, FIFO queues, stack and AVL tree |
 | Algorithms | Linear search, binary search and five sorting algorithms |
-| Automated verification | 84 tests: 39 C, 19 browser-core JavaScript, 23 API and 3 Playwright end-to-end tests |
+| Automated verification | 85 tests: 39 C, 19 browser-core JavaScript, 24 API and 3 Playwright end-to-end tests |
 | CI | GitHub Actions, including AddressSanitizer and UndefinedBehaviorSanitizer |
 | Project scope | Educational, single-user demonstration; not connected to a government system |
 
