@@ -73,7 +73,13 @@ Each successful transition appends a timestamped history entry.
 - JSON request bodies are limited to 16 KB.
 - Invalid JSON returns 400; unsupported content type returns 415; oversized requests return 413.
 - Missing complaints return 404; invalid status transitions return 409.
-- The service returns JSON error objects, for example: { "error": "Complaint not found." }.
+- The service returns JSON error objects, for example: { "error": "Complaint not found." }. Cross-origin requests are rejected with 403, untrusted Host headers with 421, and excess write requests with 429 and a `Retry-After` header.
+
+## API security and request protections
+
+The local server binds to `127.0.0.1` and validates the request Host against the loopback host and listening port to reduce DNS-rebinding exposure. Browser requests carrying an Origin header must match the request host, and requests marked `Sec-Fetch-Site: cross-site` are rejected. The server does not enable CORS. Write operations are rate-limited per remote address (60 requests per 60 seconds by default); read-only requests are not counted. Responses include content-sniffing, framing, referrer, permissions, cross-origin and cache-control protections. Request headers are capped at 8 KB, request URLs at 2 KB, and JSON bodies at 16 KB. JSON must be valid UTF-8 and use the application/json content type. Unknown request fields and control characters in text fields are rejected.
+
+These measures are defense-in-depth for a local educational service, not a substitute for authentication, authorization, TLS, or production deployment hardening. Do not expose this service to an untrusted network or treat it as a production citizen-data system.
 
 ## Database maintenance: migrations, backup and restore
 
