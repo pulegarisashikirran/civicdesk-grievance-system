@@ -418,3 +418,87 @@ test("API requires JSON content type and rejects invalid UTF-8 bodies", async t 
   });
   assert.equal(invalidUtf8.status, 400);
 });
+
+
+async function startAuthenticatedServer(t) {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-auth-"));
+  const dataFile = path.join(directory, "civicdesk.sqlite");
+  const server = await createApiServer({ dataFile, bootstrapAdmin: { email: "admin@example.test", password: "AdminPassword123" } });
+  await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
+  t.after(async () => {
+    if (server.listening) await new Promise(resolve => server.close(resolve));
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+  return "http://127.0.0.1:" + server.address().port;
+}
+async function authRequest(base, route, body, cookieValue) {
+  return fetch(base + route, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(cookieValue ? { cookie: cookieValue } : {}) },
+    body: JSON.stringify(body)
+  });
+}
+function sessionCookie(response) { return response.headers.get("set-cookie").split(";")[0]; }
+
+test("authentication registers citizen accounts with hashed passwords and secure sessions", async t => {
+  const base = await startAuthenticatedServer(t);
+  assert.equal((await fetch(base + "/api/complaints")).status, 401);
+  const weak = await authRequest(base, "/api/auth/register", { email: "citizen@example.test", password: "weak" });
+  assert.equal(weak.status, 400);
+  const response = await authRequest(base, "/api/auth/register", { email: "Citizen@example.test", password: "CitizenPassword123" });
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).user.role, "citizen");
+  assert.match(response.headers.get("set-cookie"), /HttpOnly/);
+  assert.match(response.headers.get("set-cookie"), /SameSite=Strict/);
+  const cookieValue = sessionCookie(response);
+  assert.equal((await fetch(base + "/api/auth/me", { headers: { cookie: cookieValue } })).status, 200);
+  assert.equal((await authRequest(base, "/api/auth/register", { email: "citizen@example.test", password: "CitizenPassword123" })).status, 409);
+  assert.equal((await authRequest(base, "/api/auth/login", { email: "citizen@example.test", password: "wrongPassword123" })).status, 401);
+});
+
+test("citizens can only access their own complaints and cannot advance statuses", async t => {
+  const base = await startAuthenticatedServer(t);
+  const first = await authRequest(base, "/api/auth/register", { email: "first@example.test", password: "FirstPassword123" });
+  const firstCookie = sessionCookie(first);
+  const created = await authRequest(base, "/api/complaints", { name: "First Citizen", area: "Madhapur", department: "Roads", priority: "High" }, firstCookie);
+  assert.equal(created.status, 201);
+  const second = await authRequest(base, "/api/auth/register", { email: "second@example.test", password: "SecondPassword123" });
+  const hidden = await fetch(base + "/api/complaints/1000", { headers: { cookie: sessionCookie(second) } });
+  assert.equal(hidden.status, 404);
+  const forbidden = await authRequest(base, "/api/complaints/1000/status", { status: "Assigned" }, firstCookie);
+  assert.equal(forbidden.status, 403);
+});
+
+test("admins create officers and officers can update complaint statuses", async t => {
+  const base = await startAuthenticatedServer(t);
+  const admin = await authRequest(base, "/api/auth/login", { email: "admin@example.test", password: "AdminPassword123" });
+  const adminCookie = sessionCookie(admin);
+  const citizen = await authRequest(base, "/api/auth/register", { email: "owner@example.test", password: "OwnerPassword123" });
+  const citizenCookie = sessionCookie(citizen);
+  const complaint = await authRequest(base, "/api/complaints", { name: "Owner", area: "Madhapur", department: "Roads", priority: "High" }, citizenCookie);
+  assert.equal(complaint.status, 201);
+  const staff = await authRequest(base, "/api/users", { email: "officer@example.test", password: "OfficerPassword123", role: "officer" }, adminCookie);
+  assert.equal(staff.status, 201);
+  const officer = await authRequest(base, "/api/auth/login", { email: "officer@example.test", password: "OfficerPassword123" });
+  const changed = await authRequest(base, "/api/complaints/1000/status", { status: "Assigned" }, sessionCookie(officer));
+  assert.equal(changed.status, 200);
+  assert.equal((await fetch(base + "/api/users", { headers: { cookie: citizenCookie } })).status, 403);
+});
+
+test("logout revokes sessions and admins can deactivate accounts", async t => {
+  const base = await startAuthenticatedServer(t);
+  const admin = await authRequest(base, "/api/auth/login", { email: "admin@example.test", password: "AdminPassword123" });
+  const adminCookie = sessionCookie(admin);
+  const user = await authRequest(base, "/api/auth/register", { email: "disable@example.test", password: "DisablePassword123" });
+  const userCookie = sessionCookie(user);
+  const list = await fetch(base + "/api/users", { headers: { cookie: adminCookie } });
+  assert.equal(list.status, 200);
+  const users = (await list.json()).users;
+  const id = users.find(item => item.email === "disable@example.test").id;
+  const disabled = await authRequest(base, "/api/users/" + id + "/active", { active: false }, adminCookie);
+  assert.equal(disabled.status, 200);
+  assert.equal((await fetch(base + "/api/auth/me", { headers: { cookie: userCookie } })).status, 401);
+  const logout = await authRequest(base, "/api/auth/logout", {}, adminCookie);
+  assert.equal(logout.status, 200);
+  assert.equal((await fetch(base + "/api/auth/me", { headers: { cookie: adminCookie } })).status, 401);
+});
