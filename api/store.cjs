@@ -196,9 +196,11 @@ class ComplaintStore {
     if (currentVersion < 4) {
       database.exec("BEGIN IMMEDIATE");
       try {
+        const columns = database.prepare("PRAGMA table_info(complaints)").all();
+        if (!columns.some(column => column.name === "assigned_to")) {
+          database.exec("ALTER TABLE complaints ADD COLUMN assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL;");
+        }
         database.exec(`
-          ALTER TABLE complaints ADD COLUMN assigned_to INTEGER
-            REFERENCES users(id) ON DELETE SET NULL;
           CREATE INDEX IF NOT EXISTS idx_complaints_assigned_to ON complaints(assigned_to);
           PRAGMA user_version = 4;
         `);
