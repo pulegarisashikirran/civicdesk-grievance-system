@@ -5,6 +5,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { ComplaintStore, StoreError } = require("./store.cjs");
 const { AuthService, SESSION_MS } = require("./auth.cjs");
+const { AuthService, SESSION_MS } = require("./auth.cjs");
 
 const MAX_BODY_BYTES = 16 * 1024;
 const DEFAULT_RATE_LIMIT = Object.freeze({ windowMs: 60_000, max: 60 });
@@ -69,6 +70,8 @@ async function createApiServer(options = {}) {
     const existing = store.database.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
     if (!existing) auth.createUser({ ...options.bootstrapAdmin, role: "admin" });
   }
+  const auth = new AuthService(store.database);
+  if (options.bootstrapAdmin && !store.database.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get()) auth.createUser({ ...options.bootstrapAdmin, role: "admin" });
   const rateLimit = { ...DEFAULT_RATE_LIMIT, ...(options.rateLimit || {}) };
   if (!Number.isSafeInteger(rateLimit.windowMs) || rateLimit.windowMs < 1 ||
       !Number.isSafeInteger(rateLimit.max) || rateLimit.max < 1) {
@@ -108,6 +111,12 @@ async function createApiServer(options = {}) {
       }
       const url = new URL(request.url, "http://127.0.0.1");
       const pathname = url.pathname;
+      const cookies = Object.fromEntries(String(request.headers.cookie || "").split(";").map(part => { const i = part.indexOf("="); return i < 0 ? ["", ""] : [part.slice(0,i).trim(), decodeURIComponent(part.slice(i+1).trim())]; }).filter(([key]) => key));
+      const sessionToken = cookies.civicdesk_session || "";
+      const currentUser = auth.authenticate(sessionToken);
+      const requireUser = () => { if (!currentUser) throw new StoreError(401, "Please sign in to continue."); return currentUser; };
+      const requireRole = (...roles) => { if (options.authRequired === false) return { id: 0, role: "admin" }; const user = requireUser(); if (!roles.includes(user.role)) throw new StoreError(403, "Your account does not have permission to perform this action."); return user; };
+      const sessionCookie = token => "civicdesk_session=" + token + "; HttpOnly; SameSite=Strict; Path=/; Max-Age=" + Math.floor(SESSION_MS / 1000);
       const cookies = Object.fromEntries(String(request.headers.cookie || "").split(";").map(part => {
         const index = part.indexOf("=");
         return index < 0 ? ["", ""] : [part.slice(0, index).trim(), decodeURIComponent(part.slice(index + 1).trim())];
