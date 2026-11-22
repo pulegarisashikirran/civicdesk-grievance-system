@@ -96,7 +96,7 @@ class ComplaintStore {
 
   static applyMigrations(database) {
     const currentVersion = database.prepare("PRAGMA user_version").get().user_version;
-    const latestVersion = 2;
+    const latestVersion = 3;
     if (currentVersion > latestVersion) {
       throw new Error("Database schema version " + currentVersion + " is newer than this CivicDesk version supports.");
     }
@@ -148,6 +148,43 @@ class ComplaintStore {
           CREATE INDEX IF NOT EXISTS idx_complaints_area
             ON complaints(area);
           PRAGMA user_version = 2;
+        `);
+        database.exec("COMMIT");
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
+    }
+
+    if (currentVersion < 3) {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        database.exec(`
+          CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            password_hash TEXT NOT NULL,
+            password_salt TEXT NOT NULL,
+            role TEXT NOT NULL CHECK(role IN ('citizen','officer','admin')),
+            created_at TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1))
+          );
+          CREATE TABLE IF NOT EXISTS user_sessions (
+            token_hash TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+          );
+          CREATE TABLE IF NOT EXISTS complaint_owners (
+            complaint_id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            FOREIGN KEY(complaint_id) REFERENCES complaints(id) ON DELETE CASCADE,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+          );
+          CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON user_sessions(expires_at);
+          CREATE INDEX IF NOT EXISTS idx_complaint_owners_user ON complaint_owners(user_id);
+          PRAGMA user_version = 3;
         `);
         database.exec("COMMIT");
       } catch (error) {
