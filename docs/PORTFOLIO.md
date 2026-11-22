@@ -89,7 +89,7 @@ No. It is a separate JavaScript companion with its own browser state and localSt
 
 ## Honest limitations and possible future work
 
-- The API has authentication and role checks, but the browser dashboard does not yet provide an interactive sign-in screen.
+- The authenticated dashboard is available only from the local API server; the hosted GitHub Pages demo remains a browser-local demonstration.
 - No public deployment or government-system integration.
 - Browser data is local to the browser; it is not synchronized with the C application.
 - The project uses sample data and is not intended for real citizens' personal information.
