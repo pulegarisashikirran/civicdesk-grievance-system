@@ -943,7 +943,8 @@ static int test_queue_can_be_reused_after_becoming_empty(void)
     CHECK(q.front == NULL && q.rear == NULL && q.size == 0);
 
     CHECK(queue_enqueue(&q, b) == 1);
-    CHECK(q.front == b && q.rear == b && q.size == 1);
+    CHECK(q.front != NULL && q.rear != NULL &&
+          q.front->complaint == b && q.rear->complaint == b && q.size == 1);
     CHECK(queue_dequeue(&q) == b);
     CHECK(queue_is_empty(&q));
 
