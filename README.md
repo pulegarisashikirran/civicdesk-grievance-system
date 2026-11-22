@@ -43,7 +43,8 @@ The C99 console application is the original data-structures implementation. The 
 * 12 pre-loaded sample complaints (some already in progress or resolved) so every feature can be demonstrated immediately.
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
 * Optional REST API (`api/server.cjs`): health check, complaint creation/list/detail, sequential status updates, request validation and persistent JSON storage, using Node.js built-in modules only.
-* 39 automated C tests and 19 JavaScript unit tests covering the data structures, algorithms, saving and loading, and system rules.\n* Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, and CivicDesk file import/export.
+* 39 automated C tests, 19 browser JavaScript tests and 8 REST API tests cover data structures, algorithms, API validation, persistence and system rules.
+* 2 Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, and CivicDesk file import/export.
 * Complete memory clean-up on exit: every node and complaint is freed; GitHub Actions runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Data Structures & Algorithms — Topics Used, Locations & Logic
