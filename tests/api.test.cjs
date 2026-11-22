@@ -431,9 +431,9 @@ async function startAuthenticatedServer(t) {
   });
   return "http://127.0.0.1:" + server.address().port;
 }
-async function authRequest(base, route, body, cookieValue) {
+async function authRequest(base, route, body, cookieValue, method = "POST") {
   return fetch(base + route, {
-    method: "POST",
+    method,
     headers: { "content-type": "application/json", ...(cookieValue ? { cookie: cookieValue } : {}) },
     body: JSON.stringify(body)
   });
@@ -465,7 +465,7 @@ test("citizens can only access their own complaints and cannot advance statuses"
   const second = await authRequest(base, "/api/auth/register", { email: "second@example.test", password: "SecondPassword123" });
   const hidden = await fetch(base + "/api/complaints/1000", { headers: { cookie: sessionCookie(second) } });
   assert.equal(hidden.status, 404);
-  const forbidden = await authRequest(base, "/api/complaints/1000/status", { status: "Assigned" }, firstCookie);
+  const forbidden = await authRequest(base, "/api/complaints/1000/status", { status: "Assigned" }, firstCookie, "PATCH");
   assert.equal(forbidden.status, 403);
 });
 
@@ -480,7 +480,7 @@ test("admins create officers and officers can update complaint statuses", async 
   const staff = await authRequest(base, "/api/users", { email: "officer@example.test", password: "OfficerPassword123", role: "officer" }, adminCookie);
   assert.equal(staff.status, 201);
   const officer = await authRequest(base, "/api/auth/login", { email: "officer@example.test", password: "OfficerPassword123" });
-  const changed = await authRequest(base, "/api/complaints/1000/status", { status: "Assigned" }, sessionCookie(officer));
+  const changed = await authRequest(base, "/api/complaints/1000/status", { status: "Assigned" }, sessionCookie(officer), "PATCH");
   assert.equal(changed.status, 200);
   assert.equal((await fetch(base + "/api/users", { headers: { cookie: citizenCookie } })).status, 403);
 });
@@ -495,7 +495,7 @@ test("logout revokes sessions and admins can deactivate accounts", async t => {
   assert.equal(list.status, 200);
   const users = (await list.json()).users;
   const id = users.find(item => item.email === "disable@example.test").id;
-  const disabled = await authRequest(base, "/api/users/" + id + "/active", { active: false }, adminCookie);
+  const disabled = await authRequest(base, "/api/users/" + id + "/active", { active: false }, adminCookie, "PATCH");
   assert.equal(disabled.status, 200);
   assert.equal((await fetch(base + "/api/auth/me", { headers: { cookie: userCookie } })).status, 401);
   const logout = await authRequest(base, "/api/auth/logout", {}, adminCookie);
