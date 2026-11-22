@@ -379,6 +379,19 @@ The AVL tree height was 17 for this generated dataset. Binary Search's displayed
 
 ## Performance and scalability benchmark\n\nA separate tool measures AVL insertion/search and priority-queue enqueue/dequeue at 1,000, 10,000 and 50,000 complaints. It reports the median of three deterministic runs, AVL height and an explicitly labelled structural memory estimate. See [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for the workload, interpretation and Windows/Linux build commands.\n\n## Sample Outputs
 
+
+### Recorded local scalability results
+
+The optimized Windows/GCC run processed up to **50,000 complaints**. Median of three runs:
+
+| Complaints | AVL insert | AVL search | Queue add | Queue drain | AVL height |
+|---:|---:|---:|---:|---:|---:|
+| 1,000 | 0.00 ms | 1.00 ms | 0.00 ms | 0.00 ms | 12 |
+| 10,000 | 7.00 ms | 15.00 ms | 1.00 ms | 1.00 ms | 16 |
+| 50,000 | 45.00 ms | 141.00 ms | 6.00 ms | 4.00 ms | 19 |
+
+At 50,000 complaints, AVL search performed 250,000 successful lookups. The estimated structural footprint was 10,800,000 bytes; this is **not measured RAM/RSS**. Values displayed as 0.00 ms are below timer precision. Full methodology and caveats: [Performance results](docs/PERFORMANCE.md).
+
 ### 1. Main Menu
 ![Main Menu](screenshots/main-menu.png)
 
