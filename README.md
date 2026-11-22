@@ -15,7 +15,7 @@ CivicDesk models how public-service complaints can be registered, prioritised, t
 | Browser demo | HTML, CSS and JavaScript |
 | Data structures | Linked lists, FIFO queues, stack and AVL tree |
 | Algorithms | Linear search, binary search and five sorting algorithms |
-| Automated verification | 57 tests: 36 C, 19 JavaScript and 2 Playwright end-to-end tests |
+| Automated verification | 60 tests: 39 C, 19 JavaScript and 2 Playwright end-to-end tests |
 | CI | GitHub Actions, including AddressSanitizer and UndefinedBehaviorSanitizer |
 | Project scope | Educational, single-user demonstration; not connected to a government system |
 
@@ -41,7 +41,7 @@ The C99 console application is the main implementation. The separate JavaScript 
 * Pending-day calculation that stops counting once a complaint is resolved.
 * 12 pre-loaded sample complaints (some already in progress or resolved) so every feature can be demonstrated immediately.
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
-* 36 automated C tests and 19 JavaScript unit tests covering the data structures, algorithms, saving and loading, and system rules.\n* Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, and CivicDesk file import/export.
+* 39 automated C tests and 19 JavaScript unit tests covering the data structures, algorithms, saving and loading, and system rules.\n* Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, and CivicDesk file import/export.
 * Complete memory clean-up on exit: every node and complaint is freed; GitHub Actions runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Data Structures & Algorithms — Topics Used, Locations & Logic
@@ -426,7 +426,7 @@ bst.h/.c              Binary Search Tree of complaints keyed by ID
 search_sort.h/.c      linear_search, binary_search, five sorts, comparators, benchmarks
 sample_data.h/.c      12 sample complaints and a random complaint generator for benchmarks
 util.h/.c             Safe allocation, string helpers, date conversion
-test_civicdesk.c      36 automated C tests for the structures, algorithms, data files and system rules\ntools/scalability_benchmark.c  Standalone repeatable AVL and queue benchmark
+test_civicdesk.c      39 automated C tests for the structures, algorithms, data files and system rules\ntools/scalability_benchmark.c  Standalone repeatable AVL and queue benchmark
  tests/civicdesk.test.cjs 19 automated JavaScript tests for browser-side data structures and algorithms
  .github/workflows/c-ci.yml Builds, tests and runs C memory-safety checks on GitHub Actions
 Makefile              Builds civicdesk and test_civicdesk
@@ -450,7 +450,7 @@ The requested direction is a complaint-management project built only on the topi
 
 **Implemented in this version:** complaint registration; three-level priority queues; status history with linked lists; undo with a stack; AVL tree index; AVL, binary and linear search; five sorting algorithms with timing; benchmark; sample data; saving and loading of data files; automated tests; full memory clean-up.
 
-**Automated test coverage:** The 36-test C suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, and that all five algorithms preserve the input elements and correctly sort 25 deterministic random datasets (five sizes, five seeds) across all four sort fields, that quick sort handles sorted and reversed input, that merge sort is stable, that AVL search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data; null system pointers, null paths and empty paths are rejected safely.
+**Automated test coverage:** The 39-test C suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, and that all five algorithms preserve the input elements and correctly sort 25 deterministic random datasets (five sizes, five seeds) across all four sort fields, that quick sort handles sorted and reversed input, that merge sort is stable, that AVL search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data; null system pointers, null paths and empty paths are rejected safely; a 10,000-complaint integration stress test checks array growth, AVL lookup and exact priority/FIFO draining; oversized data-file records are rejected without replacing existing data.
 
 **Still pending / sensible next steps:** sharing data between programs through a server and a database, AVL deletion support, and more tests for menu input handling.
 
