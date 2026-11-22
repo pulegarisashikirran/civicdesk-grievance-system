@@ -11,7 +11,7 @@ CivicDesk uses four automated test suites. Run the C, JavaScript and REST API su
 | REST API | `tests/api.test.cjs` | HTTP routes, input validation, status lifecycle, JSON persistence, malformed and oversized requests |
 | Browser end-to-end | `tests/e2e/civicdesk.spec.cjs` | Real dashboard workflows, metric changes, refresh persistence, import and export |
 
-The current repository documents **39 C tests, 19 browser JavaScript tests, 8 REST API tests and 2 Playwright end-to-end scenarios (68 total)**. CI runs the suites on pushes and pull requests.
+The current repository documents **39 C tests, 19 browser JavaScript tests, 9 REST API tests and 2 Playwright end-to-end scenarios (68 total)**. CI runs the suites on pushes and pull requests.
 
 ## C tests (Windows PowerShell)
 
