@@ -189,7 +189,9 @@ async function createApiServer(options = {}) {
         const user = requireRole("citizen", "officer", "admin");
         const complaints = user.role === "citizen"
           ? store.database.prepare("SELECT c.* FROM complaints c JOIN complaint_owners o ON o.complaint_id=c.id WHERE o.user_id=? ORDER BY c.id").all(user.id).map(row => store.buildRecord(row))
-          : store.list();
+          : user.role === "officer"
+            ? store.database.prepare("SELECT * FROM complaints WHERE assigned_to=? ORDER BY id").all(user.id).map(row => store.buildRecord(row))
+            : store.list();
         return sendJson(response, 200, { complaints, count: complaints.length });
       }
       if (request.method === "POST" && pathname === "/api/complaints") {
@@ -199,6 +201,24 @@ async function createApiServer(options = {}) {
         return sendJson(response, 201, item, { location: "/api/complaints/" + item.id });
       }
 
+      const assignmentMatch = pathname.match(/^\/api\/complaints\/(\d+)\/assignment$/);
+      if (request.method === "PATCH" && assignmentMatch) {
+        requireRole("admin");
+        const id = Number(assignmentMatch[1]);
+        if (!Number.isSafeInteger(id)) throw new StoreError(400, "Complaint ID is invalid.");
+        const body = await readJson(request);
+        if (Object.keys(body).length !== 1 || !(body.officerId === null || Number.isSafeInteger(body.officerId) && body.officerId > 0)) {
+          throw new StoreError(400, "Provide only a positive officerId or null to unassign.");
+        }
+        if (!store.find(id)) throw new StoreError(404, "Complaint not found.");
+        let officer = null;
+        if (body.officerId !== null) {
+          officer = store.database.prepare("SELECT id,email FROM users WHERE id=? AND role='officer' AND active=1").get(body.officerId);
+          if (!officer) throw new StoreError(400, "Choose an active officer account.");
+        }
+        store.database.prepare("UPDATE complaints SET assigned_to=? WHERE id=?").run(body.officerId, id);
+        return sendJson(response, 200, { complaint: store.find(id), assignedOfficer: officer });
+      }
       const match = pathname.match(/^\/api\/complaints\/(\d+)(?:\/status)?$/);
       if (match) {
         const id = Number(match[1]);
@@ -210,11 +230,17 @@ async function createApiServer(options = {}) {
           if (user.role === "citizen") {
             const owner = store.database.prepare("SELECT user_id FROM complaint_owners WHERE complaint_id=?").get(id);
             if (!owner || owner.user_id !== user.id) throw new StoreError(404, "Complaint not found.");
+          } else if (user.role === "officer" && item.assignedTo !== user.id) {
+            throw new StoreError(404, "Complaint not found.");
           }
           return sendJson(response, 200, item);
         }
         if (request.method === "PATCH" && pathname.endsWith("/status")) {
-          requireRole("officer", "admin");
+          const user = requireRole("officer", "admin");
+          if (user.role === "officer") {
+            const assigned = store.database.prepare("SELECT assigned_to FROM complaints WHERE id=?").get(id);
+            if (!assigned || assigned.assigned_to !== user.id) throw new StoreError(404, "Complaint not found.");
+          }
           const item = await store.updateStatus(id, await readJson(request));
           return sendJson(response, 200, item);
         }
