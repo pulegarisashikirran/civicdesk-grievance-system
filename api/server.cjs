@@ -6,12 +6,20 @@ const path = require("node:path");
 const { ComplaintStore, StoreError } = require("./store.cjs");
 
 const MAX_BODY_BYTES = 16 * 1024;
+const DEFAULT_RATE_LIMIT = Object.freeze({ windowMs: 60_000, max: 60 });
+const SECURITY_HEADERS = Object.freeze({
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer",
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
+  "cross-origin-resource-policy": "same-origin"
+});
 
 function sendJson(response, statusCode, payload, extraHeaders = {}) {
   response.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
-    "x-content-type-options": "nosniff",
+    ...SECURITY_HEADERS,
     ...extraHeaders
   });
   response.end(JSON.stringify(payload));
@@ -52,15 +60,47 @@ async function createApiServer(options = {}) {
   const dataFile = options.dataFile || process.env.CIVICDESK_API_DATA || path.join(__dirname, "data", "civicdesk.sqlite");
   const legacyDataFile = usesDefaultPath ? path.join(__dirname, "data", "complaints.json") : options.legacyDataFile;
   const store = await ComplaintStore.open(dataFile, { legacyDataFile });
+  const rateLimit = { ...DEFAULT_RATE_LIMIT, ...(options.rateLimit || {}) };
+  if (!Number.isSafeInteger(rateLimit.windowMs) || rateLimit.windowMs < 1 ||
+      !Number.isSafeInteger(rateLimit.max) || rateLimit.max < 1) {
+    store.close();
+    throw new TypeError("rateLimit.windowMs and rateLimit.max must be positive safe integers.");
+  }
+  const mutationBuckets = new Map();
 
   const server = http.createServer(async (request, response) => {
     try {
       const url = new URL(request.url, "http://127.0.0.1");
       const pathname = url.pathname;
 
+      if (request.method === "POST" || request.method === "PATCH") {
+        const now = Date.now();
+        const key = request.socket.remoteAddress || "unknown";
+        let bucket = mutationBuckets.get(key);
+        if (!bucket || now - bucket.startedAt >= rateLimit.windowMs) {
+          bucket = { startedAt: now, count: 0 };
+          mutationBuckets.set(key, bucket);
+        }
+        if (bucket.count >= rateLimit.max) {
+          const retryAfter = Math.max(1, Math.ceil((bucket.startedAt + rateLimit.windowMs - now) / 1000));
+          return sendJson(response, 429, { error: "Too many write requests. Please try again later." }, { "retry-after": String(retryAfter) });
+        }
+        bucket.count += 1;
+        if (mutationBuckets.size > 1000) {
+          for (const [address, entry] of mutationBuckets) {
+            if (now - entry.startedAt >= rateLimit.windowMs) mutationBuckets.delete(address);
+          }
+        }
+      }
+
       if (request.method === "GET" && (pathname === "/" || pathname === "/index.html")) {
         const html = await fs.readFile(path.join(__dirname, "..", "index.html"));
-        response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", "x-content-type-options": "nosniff" });
+        response.writeHead(200, {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-cache",
+          ...SECURITY_HEADERS,
+          "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+        });
         return response.end(html);
       }
       if (request.method === "GET" && pathname === "/api/health") {
@@ -99,6 +139,9 @@ async function createApiServer(options = {}) {
     }
   });
 
+  server.requestTimeout = 15_000;
+  server.headersTimeout = 10_000;
+  server.keepAliveTimeout = 5_000;
   server.on("close", () => store.close());
   return server;
 }
