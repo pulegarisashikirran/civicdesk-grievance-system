@@ -47,7 +47,7 @@ function readJson(request) {
 }
 
 async function createApiServer(options = {}) {
-  const dataFile = options.dataFile || path.join(__dirname, "data", "complaints.json");
+  const dataFile = options.dataFile || process.env.CIVICDESK_API_DATA || path.join(__dirname, "data", "complaints.json");
   const store = await ComplaintStore.open(dataFile);
 
   const server = http.createServer(async (request, response) => {
