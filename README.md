@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/pulegarisashikirran/civicdesk-grievance-system/actions/workflows/c-ci.yml/badge.svg?branch=civicdesk-reliability-upgrades)](https://github.com/pulegarisashikirran/civicdesk-grievance-system/actions/workflows/c-ci.yml)
 
-**A data-structures-driven complaint management system built in C99, with a browser-based JavaScript demo.**
+**A data-structures-driven complaint management system built in C99, with a browser demo and an optional Node.js REST API.**
 
-CivicDesk models how public-service complaints can be registered, prioritised, tracked, searched and reported. The C application combines three linked-list priority queues, per-complaint status histories, a stack-based undo feature and a self-balancing AVL tree. Five sorting algorithms and three search approaches support reporting and performance comparisons.
+CivicDesk models how public-service complaints can be registered, prioritised, tracked, searched and reported. The C application combines three linked-list priority queues, per-complaint status histories, a stack-based undo feature and a self-balancing AVL tree. Five sorting algorithms and three search approaches support reporting and performance comparisons. An optional local REST API provides complaint creation, lookup, status updates and JSON-file persistence.
 
 <details>
 <summary><strong>Project at a glance</strong></summary>
@@ -13,9 +13,10 @@ CivicDesk models how public-service complaints can be registered, prioritised, t
 |---|---|
 | Core language | C99 (manual memory management; no external C libraries) |
 | Browser demo | HTML, CSS and JavaScript |
+| Optional API backend | Node.js built-in HTTP server and JSON file storage |
 | Data structures | Linked lists, FIFO queues, stack and AVL tree |
 | Algorithms | Linear search, binary search and five sorting algorithms |
-| Automated verification | 60 tests: 39 C, 19 JavaScript and 2 Playwright end-to-end tests |
+| Automated verification | 68 tests: 39 C, 19 browser-core JavaScript, 8 API and 2 Playwright end-to-end tests |
 | CI | GitHub Actions, including AddressSanitizer and UndefinedBehaviorSanitizer |
 | Project scope | Educational, single-user demonstration; not connected to a government system |
 
@@ -23,9 +24,9 @@ CivicDesk models how public-service complaints can be registered, prioritised, t
 
 **[▶ Open the live browser demo](https://pulegarisashikirran.github.io/civicdesk-grievance-system/)** · [Browse source code](https://github.com/pulegarisashikirran/civicdesk-grievance-system/tree/civicdesk-reliability-upgrades) · [View development commits](https://github.com/pulegarisashikirran/civicdesk-grievance-system/commits/civicdesk-reliability-upgrades/)
 
-**Technical guides:** [Architecture and data flow](docs/ARCHITECTURE.md) · [Testing and CI](docs/TESTING.md) · [Performance and scalability](docs/PERFORMANCE.md) · [Resume and interview guide](docs/PORTFOLIO.md)
+**Technical guides:** [Architecture and data flow](docs/ARCHITECTURE.md) · [REST API reference](docs/API.md) · [Testing and CI](docs/TESTING.md) · [Performance and scalability](docs/PERFORMANCE.md) · [Resume and interview guide](docs/PORTFOLIO.md)
 
-The C99 console application is the main implementation. The separate JavaScript browser demo reproduces the core data-structure workflows for convenient interactive demonstration; it does not connect to the C executable. All sample names, areas and complaints are fictional. No data is sent to a real government system.
+The C99 console application is the original data-structures implementation. The JavaScript browser demo remains a separate localStorage-based companion. The optional Node.js API is a third, independent local service; it is not yet connected to the browser dashboard or C executable. All sample names, areas and complaints are fictional. No data is sent to a real government system.
 
 ## What is implemented
 
@@ -41,6 +42,7 @@ The C99 console application is the main implementation. The separate JavaScript 
 * Pending-day calculation that stops counting once a complaint is resolved.
 * 12 pre-loaded sample complaints (some already in progress or resolved) so every feature can be demonstrated immediately.
 * Save and load: all complaints, with their full status history, can be written to a plain text file and loaded back, so data survives closing the program.
+* Optional REST API (`api/server.cjs`): health check, complaint creation/list/detail, sequential status updates, request validation and persistent JSON storage, using Node.js built-in modules only.
 * 39 automated C tests and 19 JavaScript unit tests covering the data structures, algorithms, saving and loading, and system rules.\n* Playwright browser end-to-end tests exercise complaint filing, priority processing, status updates, undo, dashboard metrics, browser persistence, and CivicDesk file import/export.
 * Complete memory clean-up on exit: every node and complaint is freed; GitHub Actions runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
