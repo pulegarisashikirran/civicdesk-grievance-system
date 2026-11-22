@@ -69,8 +69,6 @@ async function createApiServer(options = {}) {
     const existing = store.database.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
     if (!existing) auth.createUser({ ...options.bootstrapAdmin, role: "admin" });
   }
-  const auth = new AuthService(store.database);
-  if (options.bootstrapAdmin && !store.database.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get()) auth.createUser({ ...options.bootstrapAdmin, role: "admin" });
   const rateLimit = { ...DEFAULT_RATE_LIMIT, ...(options.rateLimit || {}) };
   if (!Number.isSafeInteger(rateLimit.windowMs) || rateLimit.windowMs < 1 ||
       !Number.isSafeInteger(rateLimit.max) || rateLimit.max < 1) {
