@@ -676,14 +676,17 @@ async function toggleApiConnection() {
     return toast("Disconnected. Browser storage is active.");
   }
   try {
-    await refreshFromApi();
     apiMode = true;
+    await refreshFromApi();
     $("bConnect").textContent = "Use browser storage";
     $("apiState").textContent = "Connected to CivicDesk API";
     $("bUndo").disabled = true;
     render();
     toast("Connected. Dashboard data is now loaded from the REST API.");
   } catch (error) {
+    apiMode = false;
+    $("apiState").textContent = "Browser storage";
+    $("bUndo").disabled = false;
     toast(`Could not connect to API: ${error.message}. Open this page at http://127.0.0.1:4174/.`);
   }
 }
