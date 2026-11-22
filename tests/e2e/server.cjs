@@ -7,7 +7,7 @@ const { createApiServer } = require("../../api/server.cjs");
 
 async function main() {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-e2e-"));
-  const server = await createApiServer({ dataFile: path.join(directory, "complaints.json") });
+  const server = await createApiServer({ dataFile: path.join(directory, "civicdesk.sqlite"), authRequired: false });
   const port = Number(process.env.PORT || 4173);
 
   server.listen(port, "127.0.0.1", () => {
