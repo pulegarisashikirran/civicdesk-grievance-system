@@ -1,16 +1,17 @@
 # Testing and Continuous Integration
 
-CivicDesk uses three layers of automated checks. Run the C and JavaScript suites for fast feedback, then use Playwright to exercise the browser interface in Chromium.
+CivicDesk uses four automated test suites. Run the C, JavaScript and REST API suites for fast feedback, then use Playwright to exercise the browser interface in Chromium.
 
 ## Test layers
 
 | Layer | Test file / command | What it checks |
 |---|---|---|
 | C | `test_civicdesk.c` | Data structures, priority behavior, AVL rotations and randomized AVL and sorting stress checks, a 10,000-complaint system integration stress test, queue reuse after draining and oversized-file rejection, search/sort logic, undo, validation and file persistence |
-| JavaScript | `tests/civicdesk.test.cjs` | Browser-side structures and algorithms, dashboard metrics, validation and accessibility helpers |
+| Browser JavaScript | `tests/civicdesk.test.cjs` | Browser-side structures and algorithms, dashboard metrics, validation and accessibility helpers |
+| REST API | `tests/api.test.cjs` | HTTP routes, input validation, status lifecycle, JSON persistence, malformed and oversized requests |
 | Browser end-to-end | `tests/e2e/civicdesk.spec.cjs` | Real dashboard workflows, metric changes, refresh persistence, import and export |
 
-The current repository documents **39 C tests, 19 JavaScript tests and 2 Playwright end-to-end scenarios**. CI runs the suites on pushes and pull requests.
+The current repository documents **39 C tests, 19 browser JavaScript tests, 8 REST API tests and 2 Playwright end-to-end scenarios (68 total)**. CI runs the suites on pushes and pull requests.
 
 ## C tests (Windows PowerShell)
 
@@ -26,8 +27,24 @@ gcc -std=c99 -Wall -Wextra -pedantic -O2 -o test_civicdesk.exe test_civicdesk.c 
 Node.js 22 or a compatible recent Node.js release is recommended:
 
 ```powershell
-node --test tests/civicdesk.test.cjs
+node --test tests/civicdesk.test.cjs tests/api.test.cjs
 ```
+
+## Start the optional REST API
+
+From the repository root, run this in a separate PowerShell window:
+
+```powershell
+node api/server.cjs
+```
+
+The local service listens at `http://127.0.0.1:4174`. Quick health check:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:4174/api/health
+```
+
+The API stores its data in the ignored local file `api/data/complaints.json`. See [API.md](API.md) for endpoints and example requests. The API is a separate development service and is not connected to the browser dashboard or C application.
 
 ## Playwright browser tests (Windows PowerShell)
 
@@ -54,7 +71,7 @@ Workflow: [`.github/workflows/c-ci.yml`](../.github/workflows/c-ci.yml)
 
 The workflow has three independent jobs:
 
-1. **Build and test:** compiles the C test suite and application, runs C tests and JavaScript tests.
+1. **Build and test:** compiles the C test suite and application, then runs C, browser JavaScript and REST API tests.
 2. **Memory safety:** builds and runs the full C test suite—including the 10,000-complaint stress case—with AddressSanitizer and UndefinedBehaviorSanitizer.
 3. **Browser end-to-end:** installs Playwright and Chromium, then runs the browser workflows.
 
