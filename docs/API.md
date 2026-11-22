@@ -1,6 +1,6 @@
 # CivicDesk REST API
 
-The optional API is a local development service built with Node.js built-in modules. It does not require Express or any other runtime package.
+The optional API is a local development service built with Node.js built-in modules, including the built-in `node:sqlite` module. It requires Node.js 22.5 or newer and does not require Express or any other runtime package.
 
 ## Start the server
 
@@ -12,7 +12,7 @@ node api/server.cjs
 
 The server listens on http://127.0.0.1:4174 by default. Set PORT to use another available port. It also serves the browser dashboard at `http://127.0.0.1:4174/`, so the page and API share the same origin.
 
-The first write creates api/data/complaints.json. That local data directory is ignored by Git. To use a different data file, set CIVICDESK_API_DATA before starting the server.
+The API creates `api/data/civicdesk.sqlite`; the local data directory is ignored by Git. On first startup, if the new database does not exist but the previous `api/data/complaints.json` file does, CivicDesk validates and imports its records and full status histories into SQLite. The original JSON file is left unchanged. To use a different SQLite database file, set `CIVICDESK_API_DATA` before starting the server.
 
 ## Connect the browser dashboard
 
@@ -77,6 +77,6 @@ Each successful transition appends a timestamped history entry.
 
 ## Persistence and scope
 
-The API writes a versioned JSON document through a temporary file and rename, and serializes mutations within the running process. Its records are independent from the C CIVICDESK 1 file and browser localStorage. The locally served dashboard can read and mutate API records while API mode is enabled; the hosted GitHub Pages dashboard continues to use browser localStorage.
+The API stores complaints in SQLite tables: `complaints`, `complaint_history` and `app_metadata`. Primary keys, check constraints and a foreign key protect the record structure. Complaint creation and status changes use database transactions, so the complaint row and its history entry are committed together. Existing JSON data is migrated once when the SQLite database is first created. Its records remain independent from the C CIVICDESK 1 file and browser localStorage. The locally served dashboard can read and mutate API records while API mode is enabled; the hosted GitHub Pages dashboard continues to use browser localStorage.
 
 This is a local educational API, bound to 127.0.0.1. It has no authentication, authorization, production-grade multi-process locking, or network deployment configuration. Do not expose it publicly or submit real personal information. The API is integrated with the locally served browser dashboard; the C executable remains independent.
