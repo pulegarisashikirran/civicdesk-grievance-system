@@ -42,7 +42,15 @@ flowchart TB
         STATE <--> STORE
     end
 
-    TESTS["Automated verification\nC tests · JavaScript tests · Playwright E2E"]
+    subgraph API["Optional local REST API"]
+        ROUTES["api/server.cjs\nHTTP routes and validation"]
+        APIDATA["api/store.cjs\nPersistent complaint store"]
+        JSONFILE[("api/data/complaints.json")]
+        ROUTES --> APIDATA
+        APIDATA <--> JSONFILE
+    end
+
+    TESTS["Automated verification\nC tests · JavaScript/API tests · Playwright E2E"]
     TESTS -. verifies .-> SYS
     TESTS -. verifies .-> PAGE
     TESTS -. verifies .-> ROUTES
