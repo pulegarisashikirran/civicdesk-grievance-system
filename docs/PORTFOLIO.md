@@ -16,7 +16,7 @@ It is an educational project: the browser companion, C console and local API are
 - Implemented complaint processing, validation, save/load persistence, linear and binary search, and five sorting algorithms (bubble, selection, insertion, merge and quick sort).
 - Created a separate JavaScript dashboard with complaint filing, status updates, undo, search/sort, summary metrics, import/export and localStorage persistence.
 - Added an optional Node.js REST API with validated complaint endpoints, sequential status transitions and persistent JSON storage; it runs independently of the browser and C console.
-- Added 68 automated checks: 39 C tests, 19 browser JavaScript tests, 8 API tests and 2 Playwright end-to-end scenarios; configured GitHub Actions for build, tests and sanitizer checks.
+- Added 68 automated checks: 39 C tests, 19 browser JavaScript tests, 9 API tests and 2 Playwright end-to-end scenarios; configured GitHub Actions for build, tests and sanitizer checks.
 
 **Tip:** Keep only the bullets that fit your resume and that you can confidently explain. Add the repository and live demo links beside the project title.
 
