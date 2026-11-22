@@ -652,7 +652,7 @@ async function refreshFromApi() {
   const result = await apiRequest("/api/complaints");
   if (!Array.isArray(result.complaints)) throw new Error("API returned an invalid complaint list.");
   const next = { bst: new BST(), pq: new PriorityQueues(), undo: new UndoStack(), all: [] };
-  const previous = sys;
+  const previous = { bst: sys.bst, pq: sys.pq, undo: sys.undo, all: sys.all };
   Object.assign(sys, next);
   try {
     for (const item of result.complaints) {
@@ -672,7 +672,7 @@ async function toggleApiConnection() {
     $("bConnect").textContent = "Connect API";
     $("apiState").textContent = "Browser storage";
     loadLocal(); show(null, "");
-    $("bUndo").disabled = false;
+    $("bUndo").disabled = false; $("bImport").disabled = false; $("bReset").disabled = false;
     return toast("Disconnected. Browser storage is active.");
   }
   try {
@@ -680,13 +680,13 @@ async function toggleApiConnection() {
     await refreshFromApi();
     $("bConnect").textContent = "Use browser storage";
     $("apiState").textContent = "Connected to CivicDesk API";
-    $("bUndo").disabled = true;
+    $("bUndo").disabled = true; $("bImport").disabled = true; $("bReset").disabled = true;
     render();
     toast("Connected. Dashboard data is now loaded from the REST API.");
   } catch (error) {
     apiMode = false;
     $("apiState").textContent = "Browser storage";
-    $("bUndo").disabled = false;
+    $("bUndo").disabled = false; $("bImport").disabled = false; $("bReset").disabled = false;
     toast(`Could not connect to API: ${error.message}. Open this page at http://127.0.0.1:4174/.`);
   }
 }
