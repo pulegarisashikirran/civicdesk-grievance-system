@@ -4,6 +4,7 @@ const http = require("node:http");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const { ComplaintStore, StoreError } = require("./store.cjs");
+const { AuthService, SESSION_MS } = require("./auth.cjs");
 
 const MAX_BODY_BYTES = 16 * 1024;
 const DEFAULT_RATE_LIMIT = Object.freeze({ windowMs: 60_000, max: 60 });
@@ -63,6 +64,11 @@ async function createApiServer(options = {}) {
   const dataFile = options.dataFile || process.env.CIVICDESK_API_DATA || path.join(__dirname, "data", "civicdesk.sqlite");
   const legacyDataFile = usesDefaultPath ? path.join(__dirname, "data", "complaints.json") : options.legacyDataFile;
   const store = await ComplaintStore.open(dataFile, { legacyDataFile });
+  const auth = new AuthService(store.database);
+  if (options.bootstrapAdmin) {
+    const existing = store.database.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
+    if (!existing) auth.createUser({ ...options.bootstrapAdmin, role: "admin" });
+  }
   const rateLimit = { ...DEFAULT_RATE_LIMIT, ...(options.rateLimit || {}) };
   if (!Number.isSafeInteger(rateLimit.windowMs) || rateLimit.windowMs < 1 ||
       !Number.isSafeInteger(rateLimit.max) || rateLimit.max < 1) {
@@ -102,6 +108,22 @@ async function createApiServer(options = {}) {
       }
       const url = new URL(request.url, "http://127.0.0.1");
       const pathname = url.pathname;
+      const cookies = Object.fromEntries(String(request.headers.cookie || "").split(";").map(part => {
+        const index = part.indexOf("=");
+        return index < 0 ? ["", ""] : [part.slice(0, index).trim(), decodeURIComponent(part.slice(index + 1).trim())];
+      }).filter(([key]) => key));
+      const sessionToken = cookies.civicdesk_session || "";
+      const currentUser = auth.authenticate(sessionToken);
+      const requireUser = () => {
+        if (!currentUser) throw new StoreError(401, "Please sign in to continue.");
+        return currentUser;
+      };
+      const requireRole = (...roles) => {
+        const user = requireUser();
+        if (!roles.includes(user.role)) throw new StoreError(403, "Your account does not have permission to perform this action.");
+        return user;
+      };
+      const sessionCookie = token => "civicdesk_session=" + token + "; HttpOnly; SameSite=Strict; Path=/; Max-Age=" + Math.floor(SESSION_MS / 1000);
 
       if (request.method === "POST" || request.method === "PATCH") {
         const now = Date.now();
@@ -136,12 +158,54 @@ async function createApiServer(options = {}) {
       if (request.method === "GET" && pathname === "/api/health") {
         return sendJson(response, 200, { status: "ok", service: "CivicDesk API" });
       }
+      if (request.method === "POST" && pathname === "/api/auth/register") {
+        const body = await readJson(request);
+        if (Object.keys(body).some(key => !["email", "password"].includes(key))) throw new StoreError(400, "Only email and password are accepted.");
+        auth.createUser({ ...body, role: "citizen" });
+        const session = auth.login(body.email, body.password);
+        return sendJson(response, 201, { user: session.user }, { "set-cookie": sessionCookie(session.token) });
+      }
+      if (request.method === "POST" && pathname === "/api/auth/login") {
+        const body = await readJson(request);
+        const session = auth.login(body.email, body.password);
+        return sendJson(response, 200, { user: session.user }, { "set-cookie": sessionCookie(session.token) });
+      }
+      if (request.method === "POST" && pathname === "/api/auth/logout") {
+        auth.logout(sessionToken);
+        return sendJson(response, 200, { message: "Signed out." }, { "set-cookie": "civicdesk_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0" });
+      }
+      if (request.method === "GET" && pathname === "/api/auth/me") {
+        return sendJson(response, 200, { user: requireUser() });
+      }
+      if (request.method === "GET" && pathname === "/api/users") {
+        requireRole("admin");
+        return sendJson(response, 200, { users: auth.listUsers() });
+      }
+      if (request.method === "POST" && pathname === "/api/users") {
+        requireRole("admin");
+        const body = await readJson(request);
+        if (Object.keys(body).some(key => !["email", "password", "role"].includes(key)) || !["officer", "admin"].includes(body.role)) throw new StoreError(400, "Admins may create officer or admin accounts using email, password and role.");
+        return sendJson(response, 201, { user: auth.createUser(body) });
+      }
+      const userMatch = pathname.match(/^\/api\/users\/(\d+)\/active$/);
+      if (request.method === "PATCH" && userMatch) {
+        requireRole("admin");
+        const body = await readJson(request);
+        if (typeof body.active !== "boolean" || Object.keys(body).length !== 1) throw new StoreError(400, "Provide only a boolean active field.");
+        auth.setUserActive(Number(userMatch[1]), body.active);
+        return sendJson(response, 200, { message: "User access updated." });
+      }
       if (request.method === "GET" && pathname === "/api/complaints") {
-        const complaints = store.list();
+        const user = requireRole("citizen", "officer", "admin");
+        const complaints = user.role === "citizen"
+          ? store.database.prepare("SELECT c.* FROM complaints c JOIN complaint_owners o ON o.complaint_id=c.id WHERE o.user_id=? ORDER BY c.id").all(user.id).map(row => store.buildRecord(row))
+          : store.list();
         return sendJson(response, 200, { complaints, count: complaints.length });
       }
       if (request.method === "POST" && pathname === "/api/complaints") {
+        const user = requireRole("citizen", "admin");
         const item = await store.create(await readJson(request));
+        if (user.role === "citizen") store.database.prepare("INSERT INTO complaint_owners (complaint_id,user_id) VALUES (?,?)").run(item.id, user.id);
         return sendJson(response, 201, item, { location: "/api/complaints/" + item.id });
       }
 
@@ -150,11 +214,17 @@ async function createApiServer(options = {}) {
         const id = Number(match[1]);
         if (!Number.isSafeInteger(id)) throw new StoreError(400, "Complaint ID is invalid.");
         if (request.method === "GET" && !pathname.endsWith("/status")) {
+          const user = requireRole("citizen", "officer", "admin");
           const item = store.find(id);
           if (!item) throw new StoreError(404, "Complaint not found.");
+          if (user.role === "citizen") {
+            const owner = store.database.prepare("SELECT user_id FROM complaint_owners WHERE complaint_id=?").get(id);
+            if (!owner || owner.user_id !== user.id) throw new StoreError(404, "Complaint not found.");
+          }
           return sendJson(response, 200, item);
         }
         if (request.method === "PATCH" && pathname.endsWith("/status")) {
+          requireRole("officer", "admin");
           const item = await store.updateStatus(id, await readJson(request));
           return sendJson(response, 200, item);
         }
