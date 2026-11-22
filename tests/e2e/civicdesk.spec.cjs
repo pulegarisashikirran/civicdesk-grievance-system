@@ -69,3 +69,36 @@ test("imports a valid CivicDesk file and exports the imported records", async ({
   expect(exported).toContain("CIVICDESK 1");
   expect(exported).toContain("C|99001|Imported Citizen|Imported Area|Water Supply|0|0");
 });
+
+
+test("connects the dashboard to the REST API and persists browser-submitted complaints", async ({ page }) => {
+  await page.locator("#bConnect").click();
+  await expect(page.locator("#apiState")).toHaveText("Connected to CivicDesk API");
+  await expect(page.locator("#bUndo")).toBeDisabled();
+  await expect(page.locator("#bImport")).toBeDisabled();
+  await expect(page.locator("#bExport")).toBeDisabled();
+  await expect(page.locator("#bReset")).toBeDisabled();
+
+  await page.locator("#nm").fill("API E2E Citizen");
+  await page.locator("#ar").fill("Integration Test Area");
+  await page.locator("#dp").selectOption({ label: "Roads" });
+  await page.locator("#pr").selectOption("1");
+  await page.locator("#bFile").click();
+
+  await expect(page.locator("#rows")).toContainText("API E2E Citizen");
+  await expect(page.locator("#statTotal")).toHaveText("1");
+  const complaintId = await page.locator("#cid").inputValue();
+  expect(complaintId).toBe("1000");
+
+  await page.reload();
+  await page.locator("#bConnect").click();
+  await expect(page.locator("#apiState")).toHaveText("Connected to CivicDesk API");
+  await expect(page.locator("#rows")).toContainText("API E2E Citizen");
+  await expect(page.locator("#statTotal")).toHaveText("1");
+
+  const response = await page.request.get("/api/complaints/" + complaintId);
+  expect(response.ok()).toBeTruthy();
+  const saved = await response.json();
+  expect(saved.name).toBe("API E2E Citizen");
+  expect(saved.status).toBe("Filed");
+});
