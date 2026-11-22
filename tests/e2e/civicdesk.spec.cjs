@@ -71,8 +71,12 @@ test("imports a valid CivicDesk file and exports the imported records", async ({
 });
 
 
-test("connects the dashboard to the REST API and persists browser-submitted complaints", async ({ page }) => {
-  await page.locator("#bConnect").click();
+test("registers a citizen, connects the authenticated dashboard and persists owned complaints", async ({ page }) => {
+  await page.locator("#accountMode").selectOption("register");
+  await page.locator("#accountEmail").fill("dashboard-citizen@example.test");
+  await page.locator("#accountPassword").fill("DashboardCitizen123");
+  await page.locator("#accountSubmit").click();
+  await expect(page.locator("#accountIdentity")).toContainText("dashboard-citizen@example.test");
   await expect(page.locator("#apiState")).toHaveText("Connected to CivicDesk API");
   await expect(page.locator("#bUndo")).toBeDisabled();
   await expect(page.locator("#bImport")).toBeDisabled();
@@ -91,7 +95,6 @@ test("connects the dashboard to the REST API and persists browser-submitted comp
   expect(complaintId).toBe("1000");
 
   await page.reload();
-  await page.locator("#bConnect").click();
   await expect(page.locator("#apiState")).toHaveText("Connected to CivicDesk API");
   await expect(page.locator("#rows")).toContainText("API E2E Citizen");
   await expect(page.locator("#statTotal")).toHaveText("1");
