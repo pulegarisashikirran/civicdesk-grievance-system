@@ -246,7 +246,7 @@ test("API assigns unique increasing IDs to concurrent complaint submissions", as
 });
 
 
-test("SQLite schema upgrades from version 1 to version 3 without losing records", async t => {
+test("SQLite schema upgrades from version 1 to version 4 without losing records", async t => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-schema-migration-"));
   const dataFile = path.join(directory, "civicdesk.sqlite");
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
