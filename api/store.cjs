@@ -80,33 +80,7 @@ class ComplaintStore {
     const database = new DatabaseSync(filePath);
     try {
       database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
-      database.exec(`
-        CREATE TABLE IF NOT EXISTS app_metadata (
-          key TEXT PRIMARY KEY,
-          value INTEGER NOT NULL
-        );
-        INSERT OR IGNORE INTO app_metadata (key, value) VALUES ('next_id', 1000);
-        CREATE TABLE IF NOT EXISTS complaints (
-          id INTEGER PRIMARY KEY,
-          name TEXT NOT NULL CHECK(length(trim(name)) BETWEEN 1 AND 31),
-          area TEXT NOT NULL CHECK(length(trim(area)) BETWEEN 1 AND 31),
-          department TEXT NOT NULL CHECK(department IN ('Water Supply', 'Electricity', 'Roads', 'Sanitation', 'Street Lights')),
-          priority TEXT NOT NULL CHECK(priority IN ('Urgent', 'High', 'Normal')),
-          status TEXT NOT NULL CHECK(status IN ('Filed', 'Assigned', 'In Progress', 'Resolved')),
-          remarks TEXT NOT NULL DEFAULT '',
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS complaint_history (
-          complaint_id INTEGER NOT NULL,
-          sequence INTEGER NOT NULL CHECK(sequence >= 0),
-          status TEXT NOT NULL CHECK(status IN ('Filed', 'Assigned', 'In Progress', 'Resolved')),
-          remarks TEXT NOT NULL,
-          at TEXT NOT NULL,
-          PRIMARY KEY (complaint_id, sequence),
-          FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE
-        );
-      `);
+      ComplaintStore.applyMigrations(database);
 
       if (!databaseExisted && options.legacyDataFile) {
         await ComplaintStore.migrateLegacyJson(database, options.legacyDataFile);
@@ -115,6 +89,69 @@ class ComplaintStore {
     } catch (error) {
       database.close();
       throw error;
+    }
+  }
+
+  static applyMigrations(database) {
+    const currentVersion = database.prepare("PRAGMA user_version").get().user_version;
+    const latestVersion = 2;
+    if (currentVersion > latestVersion) {
+      throw new Error("Database schema version " + currentVersion + " is newer than this CivicDesk version supports.");
+    }
+
+    if (currentVersion < 1) {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        database.exec(`
+          CREATE TABLE IF NOT EXISTS app_metadata (
+            key TEXT PRIMARY KEY,
+            value INTEGER NOT NULL
+          );
+          INSERT OR IGNORE INTO app_metadata (key, value) VALUES ('next_id', 1000);
+          CREATE TABLE IF NOT EXISTS complaints (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL CHECK(length(trim(name)) BETWEEN 1 AND 31),
+            area TEXT NOT NULL CHECK(length(trim(area)) BETWEEN 1 AND 31),
+            department TEXT NOT NULL CHECK(department IN ('Water Supply', 'Electricity', 'Roads', 'Sanitation', 'Street Lights')),
+            priority TEXT NOT NULL CHECK(priority IN ('Urgent', 'High', 'Normal')),
+            status TEXT NOT NULL CHECK(status IN ('Filed', 'Assigned', 'In Progress', 'Resolved')),
+            remarks TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          );
+          CREATE TABLE IF NOT EXISTS complaint_history (
+            complaint_id INTEGER NOT NULL,
+            sequence INTEGER NOT NULL CHECK(sequence >= 0),
+            status TEXT NOT NULL CHECK(status IN ('Filed', 'Assigned', 'In Progress', 'Resolved')),
+            remarks TEXT NOT NULL,
+            at TEXT NOT NULL,
+            PRIMARY KEY (complaint_id, sequence),
+            FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE
+          );
+          PRAGMA user_version = 1;
+        `);
+        database.exec("COMMIT");
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
+    }
+
+    if (currentVersion < 2) {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        database.exec(`
+          CREATE INDEX IF NOT EXISTS idx_complaints_status_priority
+            ON complaints(status, priority);
+          CREATE INDEX IF NOT EXISTS idx_complaints_area
+            ON complaints(area);
+          PRAGMA user_version = 2;
+        `);
+        database.exec("COMMIT");
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
     }
   }
 
