@@ -20,8 +20,9 @@ The API creates `api/data/civicdesk.sqlite`; the local data directory is ignored
 
 1. Start the API with `node api/server.cjs`.
 2. Open `http://127.0.0.1:4174/` (do not open `index.html` directly or use the GitHub Pages URL for this local connection).
-3. Select **Connect API** in the top navigation. The dashboard loads API complaints and switches its filing, processing, status updates, tracking and metrics to the server-backed data.
-4. Select **Use browser storage** to return to the localStorage demo.
+3. Register a citizen account or sign in using the **API account** panel. The dashboard restores an active session after refresh.
+4. Select **Connect API** in the top navigation. The dashboard loads only the complaints visible to that account and enables controls allowed by its role.
+5. Select **Use browser storage** to return to the localStorage demo.
 
 When connected, the dashboard refreshes its data from the API after each supported mutation. The API currently has no undo endpoint, so Undo is disabled in API mode. Browser-storage mode retains its existing undo, import/export and sample-data behavior. The GitHub Pages demo remains browser-storage based; the local API is not deployed publicly.
 
@@ -49,7 +50,8 @@ The schema adds `users`, `user_sessions`, `complaint_owners` and a nullable `com
 | GET | `/api/auth/me` | Return current account |
 | GET | `/api/users` | Admin: list accounts |
 | POST | `/api/users` | Admin: create officer/admin account |
-| PATCH | `/api/users/:id/active` | Admin: activate/deactivate account |\n| PATCH | `/api/complaints/:id/assignment` | Admin: assign an active officer or pass `null` to unassign |
+| PATCH | `/api/users/:id/active` | Admin: activate/deactivate account |
+| PATCH | `/api/complaints/:id/assignment` | Admin: assign an active officer or pass `null` to unassign |
 
 Passwords must be 12–128 characters and include lowercase, uppercase and a number. Registration accepts no role field. The server uses generic login errors to avoid revealing whether an email exists.
 
@@ -63,15 +65,20 @@ All request and response bodies use JSON.
 | GET | /api/complaints | List complaints, ordered by ID | 200 |
 | POST | /api/complaints | Create a complaint | 201 |
 | GET | /api/complaints/:id | Retrieve one complaint | 200 |
-| PATCH | /api/complaints/:id/status | Advance one status step | 200 |
+| PATCH | /api/complaints/:id/status | Officer (assigned only) or admin: advance one status step | 200 |
+| PATCH | /api/complaints/:id/assignment | Admin: assign/unassign an officer | 200 |
 
 ### Create a complaint
 
-PowerShell example:
+PowerShell example (sign in as the bootstrapped administrator first):
 
 ~~~powershell
+$session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+$login = @{ email = $env:CIVICDESK_ADMIN_EMAIL; password = $env:CIVICDESK_ADMIN_PASSWORD } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:4174/api/auth/login -ContentType "application/json" -Body $login -WebSession $session
+
 $body = @{ name = "Asha"; area = "Madhapur"; department = "Roads"; priority = "Urgent" } | ConvertTo-Json
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:4174/api/complaints -ContentType "application/json" -Body $body
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:4174/api/complaints -ContentType "application/json" -Body $body -WebSession $session
 ~~~
 
 Allowed departments: Water Supply, Electricity, Roads, Sanitation, Street Lights.
@@ -90,7 +97,7 @@ Example:
 
 ~~~powershell
 $body = @{ status = "Assigned"; remarks = "Assigned to Roads team" } | ConvertTo-Json
-Invoke-RestMethod -Method Patch -Uri http://127.0.0.1:4174/api/complaints/1000/status -ContentType "application/json" -Body $body
+Invoke-RestMethod -Method Patch -Uri http://127.0.0.1:4174/api/complaints/1000/status -ContentType "application/json" -Body $body -WebSession $session
 ~~~
 
 Each successful transition appends a timestamped history entry.
