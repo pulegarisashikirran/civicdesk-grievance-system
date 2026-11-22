@@ -7,6 +7,8 @@ The optional API is a local development service built with Node.js built-in modu
 From the repository root:
 
 ~~~powershell
+$env:CIVICDESK_ADMIN_EMAIL = "admin@example.test"
+$env:CIVICDESK_ADMIN_PASSWORD = "Use-A-Unique-Password-123"
 node api/server.cjs
 ~~~
 
@@ -22,6 +24,34 @@ The API creates `api/data/civicdesk.sqlite`; the local data directory is ignored
 4. Select **Use browser storage** to return to the localStorage demo.
 
 When connected, the dashboard refreshes its data from the API after each supported mutation. The API currently has no undo endpoint, so Undo is disabled in API mode. Browser-storage mode retains its existing undo, import/export and sample-data behavior. The GitHub Pages demo remains browser-storage based; the local API is not deployed publicly.
+
+## Authentication and roles
+
+The API requires a signed-in session for complaint and account-management routes. Public registration creates **citizen** accounts only. Passwords are salted and hashed with Node.js `crypto.scrypt`; plaintext passwords are never stored. Login creates a random session token whose SHA-256 hash is stored in SQLite. The browser receives the token in an `HttpOnly`, `SameSite=Strict` cookie with an eight-hour lifetime. Logout revokes the server-side session. Deactivating a user revokes all of that user's sessions.
+
+On first startup, configure the initial administrator using `CIVICDESK_ADMIN_EMAIL` and `CIVICDESK_ADMIN_PASSWORD` as shown above. The bootstrap creates an administrator only when no administrator account exists. Keep these credentials private and use a strong unique password. Administrators can create officer/admin accounts and deactivate accounts through the user-management routes. Public registration cannot select a role.
+
+| Role | Permissions |
+|---|---|
+| Citizen | File complaints and list/view only complaints they submitted. Cannot advance status. |
+| Officer | View all complaints and advance their status sequentially. Cannot manage users. |
+| Admin | View all complaints, file complaints, manage users and create staff accounts. |
+
+The schema migration adds `users`, `user_sessions` and `complaint_owners`. Existing complaints remain unassigned after migration; citizens cannot view them, while officers/admins can. The API's existing dashboard page does not yet include an interactive sign-in form; use the authenticated API routes directly, while the GitHub Pages/local browser-storage demo remains available separately.
+
+## Authentication endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/auth/register` | Register a citizen (`email`, `password`) and start a session |
+| POST | `/api/auth/login` | Start a session |
+| POST | `/api/auth/logout` | Revoke current session |
+| GET | `/api/auth/me` | Return current account |
+| GET | `/api/users` | Admin: list accounts |
+| POST | `/api/users` | Admin: create officer/admin account |
+| PATCH | `/api/users/:id/active` | Admin: activate/deactivate account |
+
+Passwords must be 12–128 characters and include lowercase, uppercase and a number. Registration accepts no role field. The server uses generic login errors to avoid revealing whether an email exists.
 
 ## Endpoints
 
@@ -104,4 +134,4 @@ Backups use SQLite `VACUUM INTO` to create a consistent standalone database. Res
 
 The API stores complaints in SQLite tables: `complaints`, `complaint_history` and `app_metadata`. Primary keys, check constraints and a foreign key protect the record structure. Complaint creation and status changes use database transactions, so the complaint row and its history entry are committed together. Existing JSON data is migrated once when the SQLite database is first created. Its records remain independent from the C CIVICDESK 1 file and browser localStorage. The locally served dashboard can read and mutate API records while API mode is enabled; the hosted GitHub Pages dashboard continues to use browser localStorage.
 
-This is a local educational API, bound to 127.0.0.1. It has no authentication, authorization, production-grade multi-process locking, or network deployment configuration. Do not expose it publicly or submit real personal information. The API is integrated with the locally served browser dashboard; the C executable remains independent.
+This is a local educational API, bound to 127.0.0.1. Authentication and role authorization are implemented, but the service is not a production-grade citizen-data system and has no TLS/network deployment configuration. Do not expose it publicly or submit real personal information. The API is integrated with the locally served browser dashboard; the C executable remains independent.
