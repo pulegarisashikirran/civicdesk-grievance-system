@@ -6,11 +6,11 @@ CivicDesk uses three layers of automated checks. Run the C and JavaScript suites
 
 | Layer | Test file / command | What it checks |
 |---|---|---|
-| C | `test_civicdesk.c` | Data structures, priority behavior, AVL rotations and randomized AVL and sorting stress checks, search/sort logic, undo, validation and file persistence |
+| C | `test_civicdesk.c` | Data structures, priority behavior, AVL rotations and randomized AVL and sorting stress checks, a 10,000-complaint system integration stress test, queue reuse after draining and oversized-file rejection, search/sort logic, undo, validation and file persistence |
 | JavaScript | `tests/civicdesk.test.cjs` | Browser-side structures and algorithms, dashboard metrics, validation and accessibility helpers |
 | Browser end-to-end | `tests/e2e/civicdesk.spec.cjs` | Real dashboard workflows, metric changes, refresh persistence, import and export |
 
-The current repository documents **36 C tests, 19 JavaScript tests and 2 Playwright end-to-end scenarios**. CI runs the suites on pushes and pull requests.
+The current repository documents **39 C tests, 19 JavaScript tests and 2 Playwright end-to-end scenarios**. CI runs the suites on pushes and pull requests.
 
 ## C tests (Windows PowerShell)
 
@@ -55,7 +55,7 @@ Workflow: [`.github/workflows/c-ci.yml`](../.github/workflows/c-ci.yml)
 The workflow has three independent jobs:
 
 1. **Build and test:** compiles the C test suite and application, runs C tests and JavaScript tests.
-2. **Memory safety:** builds and runs the C test suite with AddressSanitizer and UndefinedBehaviorSanitizer.
+2. **Memory safety:** builds and runs the full C test suite—including the 10,000-complaint stress case—with AddressSanitizer and UndefinedBehaviorSanitizer.
 3. **Browser end-to-end:** installs Playwright and Chromium, then runs the browser workflows.
 
 A passing CI run verifies the checked-in revision on the GitHub runner. Local test results should still be run after pulling changes to verify the developer's own environment.
