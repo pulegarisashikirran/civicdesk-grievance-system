@@ -4,8 +4,8 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
 
-const CURRENT_SCHEMA_VERSION = 2;
-const REQUIRED_TABLES = ["app_metadata", "complaints", "complaint_history"];
+const CURRENT_SCHEMA_VERSION = 3;
+const REQUIRED_TABLES = ["app_metadata", "complaints", "complaint_history", "users", "user_sessions", "complaint_owners"];
 
 function sqlString(value) {
   return "'" + String(value).replace(/'/g, "''") + "'";
