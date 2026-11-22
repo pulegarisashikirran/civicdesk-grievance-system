@@ -80,7 +80,7 @@ class ComplaintStore {
     const database = new DatabaseSync(filePath);
     try {
       database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
-      database.exec(\`
+      database.exec(`
         CREATE TABLE IF NOT EXISTS app_metadata (
           key TEXT PRIMARY KEY,
           value INTEGER NOT NULL
@@ -106,7 +106,7 @@ class ComplaintStore {
           PRIMARY KEY (complaint_id, sequence),
           FOREIGN KEY (complaint_id) REFERENCES complaints(id) ON DELETE CASCADE
         );
-      \`);
+      `);
 
       if (!databaseExisted && options.legacyDataFile) {
         await ComplaintStore.migrateLegacyJson(database, options.legacyDataFile);
