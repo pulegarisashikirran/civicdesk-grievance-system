@@ -48,8 +48,10 @@ function readJson(request) {
 }
 
 async function createApiServer(options = {}) {
-  const dataFile = options.dataFile || process.env.CIVICDESK_API_DATA || path.join(__dirname, "data", "complaints.json");
-  const store = await ComplaintStore.open(dataFile);
+  const usesDefaultPath = !options.dataFile && !process.env.CIVICDESK_API_DATA;
+  const dataFile = options.dataFile || process.env.CIVICDESK_API_DATA || path.join(__dirname, "data", "civicdesk.sqlite");
+  const legacyDataFile = usesDefaultPath ? path.join(__dirname, "data", "complaints.json") : options.legacyDataFile;
+  const store = await ComplaintStore.open(dataFile, { legacyDataFile });
 
   const server = http.createServer(async (request, response) => {
     try {
@@ -97,6 +99,7 @@ async function createApiServer(options = {}) {
     }
   });
 
+  server.on("close", () => store.close());
   return server;
 }
 
