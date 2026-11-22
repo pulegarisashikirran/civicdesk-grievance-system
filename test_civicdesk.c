@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
 
 #include "grievance_system.h"
@@ -249,6 +250,82 @@ static int test_avl_all_four_rotation_cases(void)
         bst_free(&tree);
         for (j = 0; j < 3; j++)
             complaint_free(items[j]);
+    }
+    return failed_here;
+}
+
+/* Validate ordering, stored heights and AVL balance recursively. */
+static int verify_avl_node(const BSTNode *node, long lower, long upper,
+                           int *count, int *valid)
+{
+    int left_height, right_height, expected_height;
+
+    if (node == NULL)
+        return 0;
+
+    if (node->complaint->cid <= lower || node->complaint->cid >= upper)
+        *valid = 0;
+
+    left_height = verify_avl_node(node->left, lower,
+                                  node->complaint->cid, count, valid);
+    right_height = verify_avl_node(node->right, node->complaint->cid,
+                                   upper, count, valid);
+    expected_height = 1 + (left_height > right_height ? left_height : right_height);
+
+    if (node->height != expected_height ||
+        left_height - right_height > 1 ||
+        right_height - left_height > 1)
+        *valid = 0;
+
+    (*count)++;
+    return expected_height;
+}
+
+static int test_avl_randomized_insertion_preserves_invariants(void)
+{
+    enum { ITEM_COUNT = 750, ROUNDS = 4 };
+    int failed_here = 0, round, i;
+
+    for (round = 0; round < ROUNDS; round++) {
+        ComplaintBST tree;
+        Complaint *items[ITEM_COUNT];
+        int order[ITEM_COUNT];
+        int count = 0, valid = 1;
+        unsigned int state = 12345u + (unsigned int)round;
+
+        bst_init(&tree);
+        for (i = 0; i < ITEM_COUNT; i++) {
+            order[i] = i + 1;
+            items[i] = complaint_create(i + 1, "AVL test", "Test area",
+                                        "Roads", PRIORITY_NORMAL, today_day());
+        }
+
+        /* Deterministic Fisher-Yates shuffle: repeatable without rand(). */
+        for (i = ITEM_COUNT - 1; i > 0; i--) {
+            int j;
+            int temp;
+            state = state * 1664525u + 1013904223u;
+            j = (int)(state % (unsigned int)(i + 1));
+            temp = order[i];
+            order[i] = order[j];
+            order[j] = temp;
+        }
+
+        for (i = 0; i < ITEM_COUNT; i++)
+            CHECK(bst_insert(&tree, items[order[i] - 1]) == 1);
+
+        verify_avl_node(tree.root, LONG_MIN, LONG_MAX, &count, &valid);
+        CHECK(valid);
+        CHECK(count == ITEM_COUNT);
+        CHECK(tree.size == ITEM_COUNT);
+        CHECK(bst_height(&tree) <= 12);
+
+        for (i = 0; i < ITEM_COUNT; i++)
+            CHECK(bst_search(&tree, i + 1) == items[i]);
+
+        bst_free(&tree);
+        for (i = 0; i < ITEM_COUNT; i++)
+            complaint_free(items[i]);
     }
     return failed_here;
 }
@@ -820,6 +897,7 @@ int main(void)
     RUN(test_duplicate_id_rejected);
     RUN(test_sorted_insertion_keeps_avl_balanced);
     RUN(test_avl_all_four_rotation_cases);
+    RUN(test_avl_randomized_insertion_preserves_invariants);
     RUN(test_linked_queue_is_fifo);
     RUN(test_priority_order_then_fifo_inside_a_priority);
     RUN(test_status_history_append_and_remove_last);
