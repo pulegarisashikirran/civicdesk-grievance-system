@@ -124,13 +124,13 @@ test("API data survives a server restart", async t => {
     restarted.once("error", reject);
     restarted.listen(0, "127.0.0.1", resolve);
   });
-  t.after(async () => {
-    if (restarted.listening) await new Promise(resolve => restarted.close(resolve));
-  });
-
-  const response = await fetch("http://127.0.0.1:" + restarted.address().port + "/api/complaints/1000");
-  assert.equal(response.status, 200);
-  assert.equal((await response.json()).name, "Persisted citizen");
+  try {
+    const response = await fetch("http://127.0.0.1:" + restarted.address().port + "/api/complaints/1000");
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).name, "Persisted citizen");
+  } finally {
+    await new Promise((resolve, reject) => restarted.close(error => error ? reject(error) : resolve()));
+  }
 });
 
 test("API rejects malformed JSON and oversized request bodies", async t => {
