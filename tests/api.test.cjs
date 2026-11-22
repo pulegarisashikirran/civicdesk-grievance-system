@@ -10,7 +10,7 @@ const { createApiServer } = require("../api/server.cjs");
 
 async function startTestServer(t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-api-"));
-  const dataFile = path.join(directory, "complaints.json");
+  const dataFile = path.join(directory, "civicdesk.sqlite");
   const server = await createApiServer({ dataFile });
   await new Promise((resolve, reject) => {
     server.once("error", reject);
@@ -18,10 +18,10 @@ async function startTestServer(t) {
   });
   const address = server.address();
   t.after(async () => {
-    await new Promise(resolve => server.close(resolve));
+    if (server.listening) await new Promise(resolve => server.close(resolve));
     await fs.rm(directory, { recursive: true, force: true });
   });
-  return { base: "http://127.0.0.1:" + address.port, dataFile };
+  return { base: "http://127.0.0.1:" + address.port, dataFile, server };
 }
 
 async function createComplaint(base, overrides = {}) {
@@ -115,15 +115,18 @@ test("API enforces the complaint status lifecycle", async t => {
 });
 
 test("API data survives a server restart", async t => {
-  const { base, dataFile } = await startTestServer(t);
+  const { base, dataFile, server } = await startTestServer(t);
   await createComplaint(base, { name: "Persisted citizen" });
 
+  await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   const restarted = await createApiServer({ dataFile });
   await new Promise((resolve, reject) => {
     restarted.once("error", reject);
     restarted.listen(0, "127.0.0.1", resolve);
   });
-  t.after(async () => new Promise(resolve => restarted.close(resolve)));
+  t.after(async () => {
+    if (restarted.listening) await new Promise(resolve => restarted.close(resolve));
+  });
 
   const response = await fetch("http://127.0.0.1:" + restarted.address().port + "/api/complaints/1000");
   assert.equal(response.status, 200);
