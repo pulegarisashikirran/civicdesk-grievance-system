@@ -7,6 +7,8 @@ const os = require("node:os");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
 const { createApiServer } = require("../api/server.cjs");
+const { ComplaintStore } = require("../api/store.cjs");
+const { createBackup, restoreBackup, inspectDatabase } = require("../api/maintenance.cjs");
 
 async function startTestServer(t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-api-"));
@@ -240,4 +242,93 @@ test("API assigns unique increasing IDs to concurrent complaint submissions", as
   const ids = (await Promise.all(responses.map(response => response.json())))
     .map(item => item.id).sort((a, b) => a - b);
   assert.deepEqual(ids, Array.from({ length: 20 }, (_, index) => 1000 + index));
+});
+
+
+test("SQLite schema upgrades from version 1 to version 2 without losing records", async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-schema-migration-"));
+  const dataFile = path.join(directory, "civicdesk.sqlite");
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+
+  const initial = await ComplaintStore.open(dataFile);
+  initial.create({ name: "Migration Citizen", area: "Madhapur", department: "Roads", priority: "High" });
+  initial.close();
+
+  const oldDatabase = new DatabaseSync(dataFile);
+  oldDatabase.exec("DROP INDEX IF EXISTS idx_complaints_status_priority; DROP INDEX IF EXISTS idx_complaints_area; PRAGMA user_version = 1;");
+  oldDatabase.close();
+
+  const upgraded = await ComplaintStore.open(dataFile);
+  try {
+    const check = new DatabaseSync(dataFile);
+    try {
+      assert.equal(check.prepare("PRAGMA user_version").get().user_version, 2);
+      const indexes = check.prepare("SELECT name FROM sqlite_master WHERE type = 'index'").all().map(row => row.name);
+      assert.ok(indexes.includes("idx_complaints_status_priority"));
+      assert.ok(indexes.includes("idx_complaints_area"));
+    } finally {
+      check.close();
+    }
+    assert.equal(upgraded.list().length, 1);
+    assert.equal(upgraded.find(1000).name, "Migration Citizen");
+  } finally {
+    upgraded.close();
+  }
+});
+
+test("SQLite backup restores complaint data and preserves a pre-restore safety copy", async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-backup-"));
+  const dataFile = path.join(directory, "civicdesk.sqlite");
+  const backupFile = path.join(directory, "backup.sqlite");
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+
+  const original = await ComplaintStore.open(dataFile);
+  original.create({ name: "Backup Citizen", area: "Madhapur", department: "Roads", priority: "Urgent" });
+  original.close();
+  await createBackup(dataFile, backupFile);
+  assert.equal(inspectDatabase(backupFile).integrity, "ok");
+
+  const changed = await ComplaintStore.open(dataFile);
+  changed.create({ name: "Later Citizen", area: "Gachibowli", department: "Water Supply", priority: "Normal" });
+  changed.close();
+
+  const restored = await restoreBackup(backupFile, dataFile);
+  assert.ok(restored.safetyBackup);
+  assert.equal(inspectDatabase(dataFile).integrity, "ok");
+
+  const recovered = await ComplaintStore.open(dataFile);
+  try {
+    assert.equal(recovered.list().length, 1);
+    assert.equal(recovered.find(1000).name, "Backup Citizen");
+  } finally {
+    recovered.close();
+  }
+
+  const safety = new DatabaseSync(restored.safetyBackup);
+  try {
+    assert.equal(safety.prepare("SELECT COUNT(*) AS count FROM complaints").get().count, 2);
+  } finally {
+    safety.close();
+  }
+});
+
+test("invalid SQLite backup is rejected without changing the live database", async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-invalid-backup-"));
+  const dataFile = path.join(directory, "civicdesk.sqlite");
+  const backupFile = path.join(directory, "not-a-database.sqlite");
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+
+  const store = await ComplaintStore.open(dataFile);
+  store.create({ name: "Keep This Citizen", area: "Madhapur", department: "Roads", priority: "High" });
+  store.close();
+  await fs.writeFile(backupFile, "not a SQLite database");
+
+  await assert.rejects(() => restoreBackup(backupFile, dataFile));
+  const unchanged = await ComplaintStore.open(dataFile);
+  try {
+    assert.equal(unchanged.list().length, 1);
+    assert.equal(unchanged.find(1000).name, "Keep This Citizen");
+  } finally {
+    unchanged.close();
+  }
 });
