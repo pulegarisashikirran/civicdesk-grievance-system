@@ -70,6 +70,7 @@ ol.h{margin:0;padding-left:20px}ol.h li{margin:6px 0}
 footer{background:var(--navy);color:#8fa1c4;padding:26px 0;font-size:.88rem}
 @media(max-width:920px){main{grid-template-columns:1fr}.rail{position:static}.bar,.bar.s{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.lanes{grid-template-columns:1fr}.links{display:none}.hero{padding:44px 0 38px}.stat{padding:13px}.stat-value{font-size:1.6rem}}
+.account-wrap{max-width:1180px;margin:18px auto 0;padding:0 22px}.account-card{display:flex;align-items:center;justify-content:space-between;gap:20px}.account-copy{min-width:180px}.account-form{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(180px,1fr) minmax(180px,1fr) auto;gap:10px;align-items:end;flex:1}.account-form label{margin:0 0 4px}.account-form input,.account-form select{margin:0}.account-form button{white-space:nowrap}.account-signed{display:flex;align-items:center;gap:12px}.account-signed span{color:var(--muted);font-size:.9rem}.account-wrap[hidden],.account-form[hidden],.account-signed[hidden]{display:none}@media(max-width:760px){.account-card{align-items:stretch;flex-direction:column}.account-form{grid-template-columns:1fr 1fr}.account-form button{grid-column:1/-1}}
 @media(prefers-reduced-motion:reduce){.lane{animation:none}#msg,html{transition:none;scroll-behavior:auto}}
 body:not(.dev) .devonly{display:none!important}
 body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
@@ -93,6 +94,19 @@ body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
 <div class="lanes" id="trays" aria-live="polite"></div>
 <p class="meta" id="meta"></p>
 </div></header>
+
+<section class="account-wrap" id="accountWrap" aria-label="API account">
+  <div class="card account-card">
+    <div class="account-copy"><h2>API account</h2><p class="sub" id="accountState">Sign in or create a citizen account to use the API.</p></div>
+    <form class="account-form" id="accountForm">
+      <div><label for="accountMode">Account action</label><select id="accountMode"><option value="login">Sign in</option><option value="register">Create citizen account</option></select></div>
+      <div><label for="accountEmail">Email</label><input id="accountEmail" type="email" maxlength="254" autocomplete="username" required></div>
+      <div><label for="accountPassword">Password</label><input id="accountPassword" type="password" minlength="12" maxlength="128" autocomplete="current-password" required></div>
+      <button id="accountSubmit" type="submit">Sign in</button>
+    </form>
+    <div class="account-signed" id="accountSigned" hidden><span id="accountIdentity"></span><button id="accountLogout" class="alt" type="button">Sign out</button></div>
+  </div>
+</section>
 
 <main id="main-content">
 <div class="rail" id="desk">
@@ -621,6 +635,24 @@ function loadLocal() {
 
 /* ---------- optional REST API connection ---------- */
 let apiMode = false;
+let apiUser = null;
+const supportsLocalApi = ["127.0.0.1", "localhost"].includes(location.hostname);
+if (!supportsLocalApi) $("accountWrap").hidden = true;
+function updateAccountUI() {
+  const signedIn = Boolean(apiUser);
+  $("accountState").textContent = signedIn ? "Signed in · " + apiUser.role : "Sign in or create a citizen account to use the API.";
+  $("accountIdentity").textContent = signedIn ? apiUser.email + " · " + apiUser.role : "";
+  $("accountForm").hidden = signedIn;
+  $("accountSigned").hidden = !signedIn;
+  const role = apiMode && apiUser ? apiUser.role : null;
+  $("bFile").hidden = role === "officer";
+  $("bNext").hidden = role === "citizen" || role === "officer";
+  $("bUpd").hidden = role === "citizen";
+  $("bFile").disabled = Boolean(apiMode && !["citizen", "admin"].includes(role));
+  $("bNext").disabled = Boolean(apiMode && role !== "admin");
+  $("bUpd").disabled = Boolean(apiMode && !["officer", "admin"].includes(role));
+}
+
 async function apiRequest(path, options = {}) {
   const response = await fetch(path, {
     method: options.method || "GET",
@@ -667,6 +699,38 @@ async function refreshFromApi() {
   $("hist").innerHTML = "";
   render();
 }
+async function submitAccount(event) {
+  event.preventDefault();
+  const mode = $("accountMode").value;
+  const route = mode === "register" ? "/api/auth/register" : "/api/auth/login";
+  try {
+    const result = await apiRequest(route, { method: "POST", body: { email: $("accountEmail").value, password: $("accountPassword").value } });
+    apiUser = result.user;
+    $("accountPassword").value = "";
+    updateAccountUI();
+    await toggleApiConnection();
+  } catch (error) {
+    toast("Account request failed: " + error.message);
+  }
+}
+async function signOutAccount() {
+  try {
+    await apiRequest("/api/auth/logout", { method: "POST", body: {} });
+    if (apiMode) await toggleApiConnection();
+    apiUser = null;
+    updateAccountUI();
+    toast("Signed out of CivicDesk API.");
+  } catch (error) { toast("Could not sign out: " + error.message); }
+}
+async function restoreAccountSession() {
+  if (!supportsLocalApi) return;
+  try {
+    const result = await apiRequest("/api/auth/me");
+    apiUser = result.user;
+    updateAccountUI();
+    await toggleApiConnection();
+  } catch { updateAccountUI(); }
+}
 async function toggleApiConnection() {
   if (apiMode) {
     apiMode = false;
@@ -674,6 +738,7 @@ async function toggleApiConnection() {
     $("apiState").textContent = "Browser storage";
     loadLocal(); show(null, "");
     $("bUndo").disabled = false; $("bExport").disabled = false; $("bImport").disabled = false; $("bReset").disabled = false;
+    updateAccountUI();
     return toast("Disconnected. Browser storage is active.");
   }
   try {
@@ -682,12 +747,14 @@ async function toggleApiConnection() {
     $("bConnect").textContent = "Use browser storage";
     $("apiState").textContent = "Connected to CivicDesk API";
     $("bUndo").disabled = true; $("bExport").disabled = true; $("bImport").disabled = true; $("bReset").disabled = true;
+    updateAccountUI();
     render();
     toast("Connected. Dashboard data is now loaded from the REST API.");
   } catch (error) {
     apiMode = false;
     $("apiState").textContent = "Browser storage";
     $("bUndo").disabled = false; $("bImport").disabled = false; $("bReset").disabled = false;
+    updateAccountUI();
     toast(`Could not connect to API: ${error.message}. Open this page at http://127.0.0.1:4174/.`);
   }
 }
@@ -699,6 +766,9 @@ Object.keys(KEYS).forEach(k => $("sk").add(new Option(k)));
 Object.keys(SORTS).forEach(k => $("sa").add(new Option(k)));
 $("pr").value = 2;
 $("bConnect").onclick = toggleApiConnection;
+$("accountMode").onchange = () => { $("accountSubmit").textContent = $("accountMode").value === "register" ? "Create account" : "Sign in"; $("accountPassword").autocomplete = $("accountMode").value === "register" ? "new-password" : "current-password"; };
+$("accountForm").addEventListener("submit", submitAccount);
+$("accountLogout").onclick = signOutAccount;
 $("bFile").onclick = fileComplaint; $("bNext").onclick = processNext; $("bUpd").onclick = updateStatus;
 $("bUndo").onclick = undoLast; $("bTrack").onclick = history;
 $("tid").addEventListener("keydown", e => { if (e.key === "Enter") history(); });
@@ -723,6 +793,8 @@ $("bReset").onclick = () => {
 };
 loadLocal();
 render();
+updateAccountUI();
+restoreAccountSession();
 </script>
 </body>
 </html>
