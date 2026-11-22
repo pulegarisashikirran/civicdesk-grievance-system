@@ -96,7 +96,7 @@ class ComplaintStore {
 
   static applyMigrations(database) {
     const currentVersion = database.prepare("PRAGMA user_version").get().user_version;
-    const latestVersion = 3;
+    const latestVersion = 4;
     if (currentVersion > latestVersion) {
       throw new Error("Database schema version " + currentVersion + " is newer than this CivicDesk version supports.");
     }
@@ -192,6 +192,22 @@ class ComplaintStore {
         throw error;
       }
     }
+
+    if (currentVersion < 4) {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        database.exec(`
+          ALTER TABLE complaints ADD COLUMN assigned_to INTEGER
+            REFERENCES users(id) ON DELETE SET NULL;
+          CREATE INDEX IF NOT EXISTS idx_complaints_assigned_to ON complaints(assigned_to);
+          PRAGMA user_version = 4;
+        `);
+        database.exec("COMMIT");
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
+    }
   }
 
   static async migrateLegacyJson(database, legacyDataFile) {
@@ -251,6 +267,7 @@ class ComplaintStore {
       id: row.id, name: row.name, area: row.area, department: row.department,
       priority: row.priority, status: row.status, remarks: row.remarks,
       createdAt: row.created_at, updatedAt: row.updated_at,
+      assignedTo: row.assigned_to ?? null,
       history: history.map(entry => ({ status: entry.status, remarks: entry.remarks, at: entry.at }))
     };
   }
