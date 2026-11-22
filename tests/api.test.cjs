@@ -332,3 +332,75 @@ test("invalid SQLite backup is rejected without changing the live database", asy
     unchanged.close();
   }
 });
+
+
+test("API rejects cross-origin and DNS-rebinding-style host requests", async t => {
+  const { base } = await startTestServer(t);
+  const crossOrigin = await fetch(base + "/api/complaints", {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: "https://attacker.example" },
+    body: JSON.stringify({ name: "Blocked", area: "Madhapur", department: "Roads", priority: "Urgent" })
+  });
+  assert.equal(crossOrigin.status, 403);
+
+  const hostileHost = await fetch(base + "/api/health", { headers: { host: "attacker.example" } });
+  assert.equal(hostileHost.status, 421);
+
+  const list = await (await fetch(base + "/api/complaints")).json();
+  assert.equal(list.count, 0);
+});
+
+test("API rejects unknown fields and control characters", async t => {
+  const { base } = await startTestServer(t);
+  const unknown = await createComplaint(base, { isAdmin: true });
+  assert.equal(unknown.status, 400);
+
+  const control = await createComplaint(base, { name: "Asha\\nInjected" });
+  assert.equal(control.status, 400);
+
+  await createComplaint(base);
+  const badRemarks = await fetch(base + "/api/complaints/1000/status", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ status: "Assigned", remarks: "line\\nbreak" })
+  });
+  assert.equal(badRemarks.status, 400);
+});
+
+test("API rate-limits writes without blocking read-only requests", async t => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "civicdesk-rate-limit-"));
+  const dataFile = path.join(directory, "civicdesk.sqlite");
+  const server = await createApiServer({ dataFile, rateLimit: { windowMs: 60_000, max: 2 } });
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  t.after(async () => {
+    if (server.listening) await new Promise(resolve => server.close(resolve));
+    await fs.rm(directory, { recursive: true, force: true });
+  });
+  const base = "http://127.0.0.1:" + server.address().port;
+  assert.equal((await createComplaint(base)).status, 201);
+  assert.equal((await createComplaint(base, { name: "Second" })).status, 201);
+  const limited = await createComplaint(base, { name: "Third" });
+  assert.equal(limited.status, 429);
+  assert.ok(Number(limited.headers.get("retry-after")) >= 1);
+  assert.equal((await fetch(base + "/api/complaints")).status, 200);
+});
+
+test("API requires JSON content type and rejects invalid UTF-8 bodies", async t => {
+  const { base } = await startTestServer(t);
+  const wrongType = await fetch(base + "/api/complaints", {
+    method: "POST",
+    headers: { "content-type": "text/plain" },
+    body: "{}"
+  });
+  assert.equal(wrongType.status, 415);
+
+  const invalidUtf8 = await fetch(base + "/api/complaints", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: Buffer.from([0x7b, 0x22, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x3a, 0xff, 0x7d])
+  });
+  assert.equal(invalidUtf8.status, 400);
+});
