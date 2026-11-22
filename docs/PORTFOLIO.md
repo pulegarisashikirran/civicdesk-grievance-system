@@ -16,7 +16,7 @@ It is an educational project: the browser dashboard can use the local API when e
 - Implemented complaint processing, validation, save/load persistence, linear and binary search, and five sorting algorithms (bubble, selection, insertion, merge and quick sort).
 - Created a JavaScript dashboard with complaint filing, status updates, search/sort, summary metrics and import/export, supporting browser localStorage or optional REST API mode.
 - Added an optional Node.js REST API with validated complaint endpoints, sequential status transitions and transactional SQLite storage, versioned schema migrations, validated backup/restore and one-time migration from the previous JSON data file; the browser can connect to it while the C console remains independent.
-- Added 80 automated checks: 39 C tests, 19 browser JavaScript tests, 19 API tests and 3 Playwright end-to-end scenarios; configured GitHub Actions for build, tests, browser/API integration and sanitizer checks.
+- Added 84 automated checks: 39 C tests, 19 browser JavaScript tests, 23 API tests and 3 Playwright end-to-end scenarios; configured GitHub Actions for build, tests, browser/API integration and sanitizer checks.
 
 **Tip:** Keep only the bullets that fit your resume and that you can confidently explain. Add the repository and live demo links beside the project title.
 
