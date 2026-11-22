@@ -83,7 +83,7 @@ body:not(.dev) .bar.s,.bar.t{grid-template-columns:1fr auto}
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <nav class="nav" aria-label="Primary navigation"><div class="in"><a class="brand" href="#top"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="#c9a24b"/><path d="M7 13.5l4 4 8-9" fill="none" stroke="#0b1b3a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>CivicDesk</a>
 <div class="links"><a href="#desk">File a complaint</a><a href="#list">Complaints</a><a href="#hist-card">Track</a><a class="devonly" href="#bench-card">Benchmark</a></div>
-<label class="sw"><input type="checkbox" id="dev" aria-label="Show data structure details"><span>Under the hood</span></label></div></nav>
+<button id="bConnect" class="alt" type="button">Connect API</button><span id="apiState" class="meta" role="status" aria-live="polite">Browser storage</span><label class="sw"><input type="checkbox" id="dev" aria-label="Show data structure details"><span>Under the hood</span></label></div></nav>
 
 <header class="hero" id="top"><div class="in">
 <h1>Every complaint, tracked from filing to resolution.</h1>
@@ -395,7 +395,7 @@ function dashboardStats(items) {
 let view = { list: null, note: "" }, toastTimer;
 function toast(t) { const m = $("msg"); m.textContent = t; m.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => m.classList.remove("on"), 3500); }
 function render() {
-  saveLocal();
+  if (!apiMode) saveLocal();
   $("trays").innerHTML = PRI.map((p, i) => {
     const q = sys.pq.qs[i]; let chips = "", k = 0;
     for (let n = q.front; n && k < 6; n = n.next, k++) chips += `<span class="chip${k === 0 ? " head" : ""}">${n.x.id}</span>`;
@@ -427,11 +427,18 @@ const parseId = value => {
 const getId = () => parseId($("cid").value);
 const findC = () => { const id = getId(); return Number.isNaN(id) ? null : sys.bst.search(id); };
 
-function fileComplaint() {
+async function fileComplaint() {
   const name = $("nm").value.trim(), area = $("ar").value.trim();
   const validation = validateComplaintFields(name, area, $("dp").value, Number($("pr").value));
   if (validation) return toast(validation);
   if (sys.all.length >= MAX_COMPLAINTS) return toast(`The browser version supports up to ${MAX_COMPLAINTS} complaints.`);
+  if (apiMode) {
+    try {
+      const item = await apiRequest("/api/complaints", { method: "POST", body: { name, area, department: $("dp").value, priority: PRI[+$("pr").value] } });
+      await refreshFromApi(); $("nm").value = $("ar").value = ""; $("cid").value = $("tid").value = item.id;
+      show(null, ""); toast(`Complaint filed in API. Your complaint ID is ${item.id}.`); return;
+    } catch (error) { return toast(`API filing failed: ${error.message}`); }
+  }
   let id = null;
   for (let attempt = 0; attempt < 128; attempt++) {
     const candidate = 1000 + Math.floor(Math.random() * 9000);
@@ -447,24 +454,37 @@ function fileComplaint() {
   $("nm").value = $("ar").value = ""; $("cid").value = $("tid").value = id;
   show(null, ""); toast(`Complaint filed. Your complaint ID is ${id}.`);
 }
-function processNext() {
+async function processNext() {
+  if (apiMode) {
+    const next = sys.pq.qs.find(q => q.size)?.front?.x;
+    if (!next) return toast("No complaints are waiting in the API.");
+    try { await apiRequest(`/api/complaints/${next.id}/status`, { method: "PATCH", body: { status: "Assigned", remarks: `Assigned to ${next.dept} department` } }); await refreshFromApi(); $("cid").value = next.id; show(null, ""); toast(`API assigned complaint ${next.id} (${PRI[next.pri]}).`); }
+    catch (error) { toast(`API assignment failed: ${error.message}`); }
+    return;
+  }
   const c = sys.pq.next();
   if (!c) return toast("No complaints are waiting in the queues.");
   c.history.append(1, `Assigned to ${c.dept} department`, TODAY);
   $("cid").value = c.id; show(null, ""); toast(`Now processing complaint ${c.id} (${PRI[c.pri]}).`);
 }
-function updateStatus() {
+async function updateStatus() {
   const c = findC();
   if (!c) return toast("Complaint not found. Enter a valid ID.");
   const cur = c.status, to = +$("to").value;
   if (cur === 0) return toast("This complaint is still in a queue. Process it first.");
   if (cur === 3) return toast("This complaint is already resolved.");
-  if (to <= cur) return toast(`It is already ${ST[cur]}. Pick a later status.`);
+  if (to !== cur + 1) return toast(`The next allowed status is ${ST[cur + 1] || "none"}.`);
+  if (apiMode) {
+    try { await apiRequest(`/api/complaints/${c.id}/status`, { method: "PATCH", body: { status: ST[to], remarks: $("rm").value.trim() } }); $("rm").value = ""; await refreshFromApi(); show(view.list, view.note); toast(`API status updated to ${ST[to]}.`); }
+    catch (error) { toast(`API update failed: ${error.message}`); }
+    return;
+  }
   c.history.append(to, $("rm").value.trim(), TODAY);
   sys.undo.push({ id: c.id, prev: cur, now: to });
   $("rm").value = ""; show(view.list, view.note); toast(`Status updated: ${ST[cur]} to ${ST[to]}.`);
 }
 function undoLast() {
+  if (apiMode) return toast("Undo is available in browser-storage mode only; the API does not expose an undo endpoint yet.");
   const r = sys.undo.top?.r;
   if (!r) return toast("Nothing to undo.");
   const c = sys.bst.search(r.id);
@@ -587,7 +607,7 @@ function importData(file) {
 
 /* ---------- automatic save in this browser ---------- */
 const KEY = "civicdesk-data";
-function saveLocal() { try { localStorage.setItem(KEY, dataText()); } catch (e) { /* storage unavailable */ } }
+function saveLocal() { if (apiMode) return; try { localStorage.setItem(KEY, dataText()); } catch (e) { /* storage unavailable */ } }
 function loadLocal() {
   try {
     const text = localStorage.getItem(KEY);
@@ -598,12 +618,83 @@ function loadLocal() {
   } catch (e) { /* nothing saved, or unreadable: keep the sample data */ }
 }
 
+/* ---------- optional REST API connection ---------- */
+let apiMode = false;
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {
+    method: options.method || "GET",
+    headers: options.body ? { "content-type": "application/json" } : {},
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+  return payload;
+}
+function apiDateDay(value) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) throw new Error("API returned an invalid date.");
+  return Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / DAY);
+}
+function fromApiComplaint(item) {
+  const pri = PRI.indexOf(item.priority);
+  if (pri < 0 || !Array.isArray(item.history) || !item.history.length) throw new Error("API returned an invalid complaint.");
+  const firstDay = apiDateDay(item.createdAt);
+  const c = new Complaint(item.id, item.name, item.area, item.department, pri, firstDay);
+  c.history.head.remarks = item.history[0].remarks || "Complaint registered";
+  for (const entry of item.history.slice(1)) {
+    const status = ST.indexOf(entry.status);
+    if (status < 1 || status > 3) throw new Error("API returned an invalid status history.");
+    c.history.append(status, entry.remarks || "", apiDateDay(entry.at));
+  }
+  return c;
+}
+async function refreshFromApi() {
+  const result = await apiRequest("/api/complaints");
+  if (!Array.isArray(result.complaints)) throw new Error("API returned an invalid complaint list.");
+  const next = { bst: new BST(), pq: new PriorityQueues(), undo: new UndoStack(), all: [] };
+  const previous = sys;
+  Object.assign(sys, next);
+  try {
+    for (const item of result.complaints) {
+      if (!add(fromApiComplaint(item))) throw new Error("API returned duplicate complaint IDs.");
+    }
+  } catch (error) {
+    Object.assign(sys, previous);
+    throw error;
+  }
+  view = { list: null, note: "" };
+  $("hist").innerHTML = "";
+  render();
+}
+async function toggleApiConnection() {
+  if (apiMode) {
+    apiMode = false;
+    $("bConnect").textContent = "Connect API";
+    $("apiState").textContent = "Browser storage";
+    loadLocal(); show(null, "");
+    $("bUndo").disabled = false;
+    return toast("Disconnected. Browser storage is active.");
+  }
+  try {
+    await refreshFromApi();
+    apiMode = true;
+    $("bConnect").textContent = "Use browser storage";
+    $("apiState").textContent = "Connected to CivicDesk API";
+    $("bUndo").disabled = true;
+    render();
+    toast("Connected. Dashboard data is now loaded from the REST API.");
+  } catch (error) {
+    toast(`Could not connect to API: ${error.message}. Open this page at http://127.0.0.1:4174/.`);
+  }
+}
+
 /* ---------- wiring ---------- */
 DEPTS.forEach(d => $("dp").add(new Option(d)));
 PRI.forEach((p, i) => $("pr").add(new Option(p, i)));
 Object.keys(KEYS).forEach(k => $("sk").add(new Option(k)));
 Object.keys(SORTS).forEach(k => $("sa").add(new Option(k)));
 $("pr").value = 2;
+$("bConnect").onclick = toggleApiConnection;
 $("bFile").onclick = fileComplaint; $("bNext").onclick = processNext; $("bUpd").onclick = updateStatus;
 $("bUndo").onclick = undoLast; $("bTrack").onclick = history;
 $("tid").addEventListener("keydown", e => { if (e.key === "Enter") history(); });
