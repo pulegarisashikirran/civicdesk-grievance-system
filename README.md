@@ -15,7 +15,7 @@ CivicDesk models how public-service complaints can be registered, prioritised, t
 | Browser demo | HTML, CSS and JavaScript |
 | Data structures | Linked lists, FIFO queues, stack and AVL tree |
 | Algorithms | Linear search, binary search and five sorting algorithms |
-| Automated verification | 56 tests: 35 C, 19 JavaScript and 2 Playwright end-to-end tests |
+| Automated verification | 57 tests: 36 C, 19 JavaScript and 2 Playwright end-to-end tests |
 | CI | GitHub Actions, including AddressSanitizer and UndefinedBehaviorSanitizer |
 | Project scope | Educational, single-user demonstration; not connected to a government system |
 
@@ -413,7 +413,7 @@ bst.h/.c              Binary Search Tree of complaints keyed by ID
 search_sort.h/.c      linear_search, binary_search, five sorts, comparators, benchmarks
 sample_data.h/.c      12 sample complaints and a random complaint generator for benchmarks
 util.h/.c             Safe allocation, string helpers, date conversion
-test_civicdesk.c      35 automated C tests for the structures, algorithms, data files and system rules
+test_civicdesk.c      36 automated C tests for the structures, algorithms, data files and system rules
  tests/civicdesk.test.cjs 19 automated JavaScript tests for browser-side data structures and algorithms
  .github/workflows/c-ci.yml Builds, tests and runs C memory-safety checks on GitHub Actions
 Makefile              Builds civicdesk and test_civicdesk
@@ -437,11 +437,11 @@ The requested direction is a complaint-management project built only on the topi
 
 **Implemented in this version:** complaint registration; three-level priority queues; status history with linked lists; undo with a stack; AVL tree index; AVL, binary and linear search; five sorting algorithms with timing; benchmark; sample data; saving and loading of data files; automated tests; full memory clean-up.
 
-**Automated test coverage:** The 35-test C suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, that quick sort handles sorted and reversed input, that merge sort is stable, that AVL search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data; null system pointers, null paths and empty paths are rejected safely.
+**Automated test coverage:** The 36-test C suite covers data structures, searching, sorting, queue priorities, undo operations, and file persistence. They check that every sorting algorithm produces the same order as a reference sort on arrays of 0, 1, 2, 50 and 400 items for every sort field, that quick sort handles sorted and reversed input, that merge sort is stable, that AVL search and binary search agree for every complaint, that queues serve Urgent before High before Normal and keep first-in-first-out order inside a level, that undo restores earlier statuses in reverse order and never removes "Filed", that duplicate IDs are rejected, that the system grows past its initial capacity, and that an empty system, an empty tree, the queue counts and the history dates after an undo behave correctly, that saving and then loading a data file restores every complaint, its status history and the queue order, and that invalid or missing files, including future-dated complaint and status records, are rejected without changing the current data; null system pointers, null paths and empty paths are rejected safely.
 
 **Still pending / sensible next steps:** sharing data between programs through a server and a database, deletion support and further AVL stress tests, a graphical or web interface, and more tests for the menu input handling.
 
-**JavaScript test coverage:** The 19-test suite checks status history, pending days, FIFO and priority queues, undo-stack behavior, BST operations, linear and binary search, all five sorting algorithms, empty/single-item inputs, merge-sort stability and complaint form validation, keyboard activation, skip navigation, and accessible complaint-row selection. GitHub Actions runs both test suites and also compiles and runs the C suite with AddressSanitizer and UndefinedBehaviorSanitizer.
+**JavaScript test coverage:** The 19-test suite checks status history, pending days, FIFO and priority queues, undo-stack behavior, BST operations, linear and binary search, all five sorting algorithms, randomized sorting stress coverage, empty/single-item inputs, merge-sort stability and complaint form validation, keyboard activation, skip navigation, and accessible complaint-row selection. GitHub Actions runs both test suites and also compiles and runs the C suite with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ## Browser dashboard
 
