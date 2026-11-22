@@ -26,6 +26,16 @@ The API creates `api/data/civicdesk.sqlite`; the local data directory is ignored
 
 When connected, the dashboard refreshes its data from the API after each supported mutation. The API currently has no undo endpoint, so Undo is disabled in API mode. Browser-storage mode retains its existing undo, import/export and sample-data behavior. The GitHub Pages demo remains browser-storage based; the local API is not deployed publicly.
 
+## Reset a local administrator password
+
+If the initial administrator password is lost, stop the API server and run this local maintenance utility from the repository root:
+
+~~~powershell
+node api/reset-admin-password.cjs
+~~~
+
+Enter the existing administrator email, then enter and confirm a new password when prompted. Password input is hidden. The utility only updates the matching active administrator's salted password hash, revokes that administrator's existing sessions, and leaves all complaints and other accounts unchanged. It uses `CIVICDESK_API_DATA` when set, otherwise `api/data/civicdesk.sqlite`. Run it only on a trusted local machine; do not commit database files or share the new password.
+
 ## Authentication and roles
 
 The API requires a signed-in session for complaint and account-management routes. Public registration creates **citizen** accounts only. Passwords are salted and hashed with Node.js `crypto.scrypt`; plaintext passwords are never stored. Login creates a random session token whose SHA-256 hash is stored in SQLite. The browser receives the token in an `HttpOnly`, `SameSite=Strict` cookie with an eight-hour lifetime. Logout revokes the server-side session. Deactivating a user revokes all of that user's sessions.
