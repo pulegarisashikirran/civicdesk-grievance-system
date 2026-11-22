@@ -75,6 +75,25 @@ Each successful transition appends a timestamped history entry.
 - Missing complaints return 404; invalid status transitions return 409.
 - The service returns JSON error objects, for example: { "error": "Complaint not found." }.
 
+## Database maintenance: migrations, backup and restore
+
+CivicDesk tracks its SQLite schema with `PRAGMA user_version`. New databases are created at schema version 1 and migrated to version 2, which adds indexes for complaint status/priority and area. Each migration runs in a transaction; databases with a newer unsupported schema version are rejected rather than silently downgraded.
+
+Run maintenance commands from the repository root. Stop the API server before restoring:
+
+~~~powershell
+# Create a timestamped backup under api/data/backups
+node api/maintenance.cjs backup
+
+# Or choose an explicit backup filename
+node api/maintenance.cjs backup .\\my-civicdesk-backup.sqlite
+
+# Restore a validated backup (stop the API server first)
+node api/maintenance.cjs restore .\\my-civicdesk-backup.sqlite
+~~~
+
+Backups use SQLite `VACUUM INTO` to create a consistent standalone database. Restore validates SQLite integrity, schema version, required tables and foreign-key consistency before replacing the live file. If a live database exists, CivicDesk first creates a timestamped `.pre-restore-...sqlite` safety backup. Invalid backups are rejected without replacing the live database. Keep backup files private and store copies outside the project folder for disaster recovery.
+
 ## Persistence and scope
 
 The API stores complaints in SQLite tables: `complaints`, `complaint_history` and `app_metadata`. Primary keys, check constraints and a foreign key protect the record structure. Complaint creation and status changes use database transactions, so the complaint row and its history entry are committed together. Existing JSON data is migrated once when the SQLite database is first created. Its records remain independent from the C CIVICDESK 1 file and browser localStorage. The locally served dashboard can read and mutate API records while API mode is enabled; the hosted GitHub Pages dashboard continues to use browser localStorage.
