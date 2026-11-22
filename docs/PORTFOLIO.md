@@ -4,9 +4,9 @@ Use this page as a source for your resume, GitHub profile, project demonstration
 
 ## 30-second project explanation
 
-CivicDesk is a data-structures-based public grievance management demonstration. The C99 console application registers complaints, places them into priority-based FIFO queues, tracks status history, indexes complaint IDs with an AVL tree, supports searching and sorting, and saves/loads records. A separate JavaScript browser companion demonstrates similar workflows with a dashboard and browser-local persistence. An optional Node.js REST API exposes complaint creation, listing, lookup and status transitions with JSON-file persistence.
+CivicDesk is a data-structures-based public grievance management demonstration. The C99 console application registers complaints, places them into priority-based FIFO queues, tracks status history, indexes complaint IDs with an AVL tree, supports searching and sorting, and saves/loads records. A JavaScript browser dashboard supports browser-local storage or an optional connection to a Node.js REST API. The API exposes complaint creation, listing, lookup and status transitions with JSON-file persistence.
 
-It is an educational project: the browser companion, C console and local API are independent; they do not synchronize with each other or connect to a government system.
+It is an educational project: the browser dashboard can use the local API when explicitly connected, while the C console remains independent. It does not connect to a government system.
 
 ## Resume-ready entry
 
@@ -14,9 +14,9 @@ It is an educational project: the browser companion, C console and local API are
 
 - Built a C99 complaint-management application using linked-list priority queues, an AVL-tree ID index, status-history lists and a linked-list undo stack.
 - Implemented complaint processing, validation, save/load persistence, linear and binary search, and five sorting algorithms (bubble, selection, insertion, merge and quick sort).
-- Created a separate JavaScript dashboard with complaint filing, status updates, undo, search/sort, summary metrics, import/export and localStorage persistence.
-- Added an optional Node.js REST API with validated complaint endpoints, sequential status transitions and persistent JSON storage; it runs independently of the browser and C console.
-- Added 68 automated checks: 39 C tests, 19 browser JavaScript tests, 9 API tests and 2 Playwright end-to-end scenarios; configured GitHub Actions for build, tests and sanitizer checks.
+- Created a JavaScript dashboard with complaint filing, status updates, search/sort, summary metrics and import/export, supporting browser localStorage or optional REST API mode.
+- Added an optional Node.js REST API with validated complaint endpoints, sequential status transitions and persistent JSON storage; the browser can connect to it while the C console remains independent.
+- Added 70 automated checks: 39 C tests, 19 browser JavaScript tests, 9 API tests and 3 Playwright end-to-end scenarios; configured GitHub Actions for build, tests, browser/API integration and sanitizer checks.
 
 **Tip:** Keep only the bullets that fit your resume and that you can confidently explain. Add the repository and live demo links beside the project title.
 
